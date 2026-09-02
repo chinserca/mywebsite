@@ -23,7 +23,7 @@
     t: 0,
     score: 0,
     best: Number(localStorage.getItem(BEST_KEY) || 0),
-    speed: 6.2,
+    speed: 4.4,
     spawn: 0,
     seedSpawn: 0,
     scoreAcc: 0,
@@ -44,8 +44,8 @@
     return {
       x: 150,
       y: world.ground,
-      w: 78,
-      h: 62,
+      w: 86,
+      h: 70,
       vy: 0,
       onGround: true,
       run: 0,
@@ -63,10 +63,10 @@
     world.t = 0;
     world.score = 0;
     world.scoreAcc = 0;
-    world.speed = 6.2;
-    world.spawn = 140;
-    world.seedSpawn = 55;
-    world.grace = 70;
+    world.speed = 4.4;
+    world.spawn = 210;
+    world.seedSpawn = 40;
+    world.grace = 110;
     world.obstacles = [];
     world.seeds = [];
     world.dust = [];
@@ -125,7 +125,7 @@
   function jump() {
     const h = world.hamster;
     if (!h || world.state !== STATE.PLAY || !h.onGround) return;
-    h.vy = -16.4;
+    h.vy = -17.8;
     h.onGround = false;
     h.squash = 1.18;
     playTone(420, 640, 0.1, 0.06);
@@ -150,21 +150,21 @@
 
   function spawnObstacle() {
     const kind = Math.random();
-    let w = 42;
-    let h = 42;
+    let w = 34;
+    let h = 34;
     let type = "ball";
-    if (kind < 0.34) {
+    if (kind < 0.28) {
       type = "block";
-      w = rand(40, 70);
-      h = rand(38, 72);
-    } else if (kind < 0.68) {
+      w = rand(28, 48);
+      h = rand(28, 48);
+    } else if (kind < 0.55) {
       type = "sock";
-      w = 36;
-      h = 58;
+      w = 30;
+      h = 44;
     }
     world.obstacles.push({
       type,
-      x: world.width + 40,
+      x: world.width + 60,
       y: world.ground,
       w,
       h,
@@ -174,9 +174,9 @@
   function spawnSeed() {
     world.seeds.push({
       x: world.width + 20,
-      y: world.ground - rand(20, 150),
-      r: 11,
-      gold: Math.random() < 0.12,
+      y: world.ground - rand(24, 120),
+      r: 12,
+      gold: Math.random() < 0.18,
       spin: rand(0, Math.PI),
     });
   }
@@ -188,10 +188,10 @@
   function hamsterBox() {
     const h = world.hamster;
     return {
-      x: h.x - h.w * 0.28,
-      y: h.y - h.h * 0.82,
-      w: h.w * 0.58,
-      h: h.h * 0.62,
+      x: h.x - h.w * 0.22,
+      y: h.y - h.h * 0.72,
+      w: h.w * 0.48,
+      h: h.h * 0.52,
     };
   }
 
@@ -203,13 +203,13 @@
 
     world.t += dt;
     if (world.grace > 0) world.grace -= dt;
-    world.speed = Math.min(13.5, 6.2 + world.t * 0.018);
+    world.speed = Math.min(9.2, 4.4 + world.t * 0.008);
     const h = world.hamster;
-    const gravity = world.jumpHeld && h.vy < 0 ? 0.48 : 0.78;
+    const gravity = world.jumpHeld && h.vy < 0 ? 0.4 : 0.68;
 
     h.vy += gravity * dt;
     h.y += h.vy * dt;
-    h.run += world.speed * 0.08 * dt;
+    h.run += world.speed * 0.09 * dt;
     h.squash += (1 - h.squash) * 0.12 * dt;
     if (h.y >= world.ground) {
       if (!h.onGround) h.squash = 0.82;
@@ -222,11 +222,11 @@
     world.seedSpawn -= dt;
     if (world.spawn <= 0) {
       spawnObstacle();
-      world.spawn = rand(70, 130) - world.speed * 3.2;
+      world.spawn = rand(130, 210) - world.speed * 2.2;
     }
     if (world.seedSpawn <= 0) {
       spawnSeed();
-      world.seedSpawn = rand(38, 78);
+      world.seedSpawn = rand(28, 58);
     }
 
     for (const hill of world.hills) {
@@ -266,7 +266,7 @@
     const box = hamsterBox();
     if (world.grace <= 0) {
       for (const obs of world.obstacles) {
-        const pad = obs.type === "ball" ? 6 : 4;
+        const pad = obs.type === "ball" ? 10 : 8;
         const o = {
           x: obs.x + pad,
           y: obs.y - obs.h + pad,
@@ -407,83 +407,155 @@
 
   function drawHamster(h) {
     const run = Math.sin(h.run);
+    const bob = h.onGround ? Math.abs(run) * 2.2 : 0;
+    const lean = h.onGround ? 0 : Math.min(0.18, -h.vy * 0.012);
     ctx.save();
     ctx.translate(h.x, h.y);
-    ctx.scale(1, h.squash);
+    ctx.scale(1.18, 1.18 * h.squash);
+    ctx.rotate(lean);
 
+    // Soft ground shadow
     ctx.fillStyle = "rgba(90, 50, 20, 0.18)";
     ctx.beginPath();
-    ctx.ellipse(0, 4, 34, 8, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 5, 36, 9, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.strokeStyle = "#c47a3a";
-    ctx.lineWidth = 7;
-    ctx.lineCap = "round";
+    // Back feet
+    ctx.fillStyle = "#d8904a";
     ctx.beginPath();
-    ctx.moveTo(-8, -8);
-    ctx.lineTo(-18 + run * 10, -2 + Math.abs(run) * 6);
-    ctx.moveTo(10, -8);
-    ctx.lineTo(22 - run * 10, -2 + Math.abs(run) * 6);
-    ctx.stroke();
-
-    ctx.fillStyle = "#e8a15a";
+    ctx.ellipse(-14, -6 + Math.abs(run) * 5, 11, 7, 0.2, 0, Math.PI * 2);
+    ctx.ellipse(16, -5 + (1 - Math.abs(run)) * 5, 11, 7, -0.15, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#f3c6a0";
     ctx.beginPath();
-    ctx.ellipse(0, -28, 34, 26, 0, 0, Math.PI * 2);
+    ctx.ellipse(-16, -3 + Math.abs(run) * 5, 5, 3.2, 0.2, 0, Math.PI * 2);
+    ctx.ellipse(18, -2 + (1 - Math.abs(run)) * 5, 5, 3.2, -0.15, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = "#f3c48a";
+    // Fluffy body
+    const bodyGrad = ctx.createRadialGradient(-8, -40, 8, 0, -30, 42);
+    bodyGrad.addColorStop(0, "#f3b36a");
+    bodyGrad.addColorStop(0.55, "#e89a4a");
+    bodyGrad.addColorStop(1, "#d48138");
+    ctx.fillStyle = bodyGrad;
     ctx.beginPath();
-    ctx.ellipse(-22, -26, 14, 13, 0, 0, Math.PI * 2);
-    ctx.ellipse(22, -26, 14, 13, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, -30 - bob, 38, 30, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = "#d98b42";
+    // Soft belly
+    ctx.fillStyle = "#ffe3bf";
     ctx.beginPath();
-    ctx.ellipse(-18, -48, 10, 9, -0.4, 0, Math.PI * 2);
-    ctx.ellipse(10, -50, 9, 8, 0.35, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#f6c2d4";
-    ctx.beginPath();
-    ctx.ellipse(-18, -48, 5, 4.5, -0.4, 0, Math.PI * 2);
-    ctx.ellipse(10, -50, 4.5, 4, 0.35, 0, Math.PI * 2);
+    ctx.ellipse(6, -24 - bob, 20, 18, 0.1, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = "#f6d7b0";
+    // Giant cheek pouches
+    ctx.fillStyle = "#f0b06a";
     ctx.beginPath();
-    ctx.ellipse(8, -30, 18, 16, 0, 0, Math.PI * 2);
+    ctx.ellipse(-24, -28 - bob, 16, 15, 0, 0, Math.PI * 2);
+    ctx.ellipse(26, -29 - bob, 17, 16, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#ffe0b8";
+    ctx.beginPath();
+    ctx.ellipse(-24, -26 - bob, 10, 9, 0, 0, Math.PI * 2);
+    ctx.ellipse(27, -27 - bob, 11, 10, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    const blink = (Math.floor(world.t / 18) % 42 === 0);
-    ctx.fillStyle = "#2b211c";
+    // Ears
+    ctx.fillStyle = "#e2954a";
+    ctx.beginPath();
+    ctx.ellipse(-16, -56 - bob, 11, 12, -0.35, 0, Math.PI * 2);
+    ctx.ellipse(12, -58 - bob, 10, 11, 0.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#ffb7c9";
+    ctx.beginPath();
+    ctx.ellipse(-16, -56 - bob, 5.5, 6, -0.35, 0, Math.PI * 2);
+    ctx.ellipse(12, -58 - bob, 5, 5.5, 0.4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Face plate
+    ctx.fillStyle = "#ffe8c8";
+    ctx.beginPath();
+    ctx.ellipse(10, -34 - bob, 20, 17, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Eyes
+    const blink = Math.floor(world.t / 16) % 48 === 0;
     if (blink) {
-      ctx.fillRect(8, -36, 8, 2);
-      ctx.fillRect(22, -37, 7, 2);
-    } else {
+      ctx.strokeStyle = "#3a2a22";
+      ctx.lineWidth = 2.2;
+      ctx.lineCap = "round";
       ctx.beginPath();
-      ctx.arc(12, -35, 3.2, 0, Math.PI * 2);
-      ctx.arc(26, -36, 3.2, 0, Math.PI * 2);
+      ctx.moveTo(4, -38 - bob);
+      ctx.lineTo(12, -38 - bob);
+      ctx.moveTo(20, -39 - bob);
+      ctx.lineTo(28, -39 - bob);
+      ctx.stroke();
+    } else {
+      ctx.fillStyle = "#2a211c";
+      ctx.beginPath();
+      ctx.ellipse(8, -38 - bob, 4.2, 5.2, 0, 0, Math.PI * 2);
+      ctx.ellipse(24, -39 - bob, 4.2, 5.2, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = "#fff";
       ctx.beginPath();
-      ctx.arc(13, -36.5, 1.1, 0, Math.PI * 2);
-      ctx.arc(27, -37.5, 1.1, 0, Math.PI * 2);
+      ctx.arc(9.4, -40 - bob, 1.6, 0, Math.PI * 2);
+      ctx.arc(25.4, -41 - bob, 1.6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(7, -36.5 - bob, 0.8, 0, Math.PI * 2);
+      ctx.arc(23, -37.5 - bob, 0.8, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    ctx.fillStyle = "#f4a6b8";
+    // Blush
+    ctx.fillStyle = "rgba(255, 140, 170, 0.55)";
     ctx.beginPath();
-    ctx.ellipse(20, -27, 3.2, 2.4, 0, 0, Math.PI * 2);
+    ctx.ellipse(2, -30 - bob, 5, 3.2, 0, 0, Math.PI * 2);
+    ctx.ellipse(30, -31 - bob, 5, 3.2, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.strokeStyle = "#2b211c";
-    ctx.lineWidth = 2;
+    // Nose and smile
+    ctx.fillStyle = "#ff8fa8";
     ctx.beginPath();
-    ctx.arc(22, -22, 6, 0.15, Math.PI - 0.15);
+    ctx.ellipse(16, -30 - bob, 3.4, 2.6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#4a3428";
+    ctx.lineWidth = 2.1;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.arc(16, -25 - bob, 7, 0.2, Math.PI - 0.2);
     ctx.stroke();
 
-    ctx.fillStyle = "#c47a3a";
+    // Whiskers
+    ctx.strokeStyle = "rgba(90, 60, 40, 0.45)";
+    ctx.lineWidth = 1.2;
     ctx.beginPath();
-    ctx.ellipse(-30, -18, 8, 5, 0.5, 0, Math.PI * 2);
+    ctx.moveTo(2, -28 - bob);
+    ctx.lineTo(-12, -26 - bob);
+    ctx.moveTo(2, -24 - bob);
+    ctx.lineTo(-11, -21 - bob);
+    ctx.moveTo(28, -29 - bob);
+    ctx.lineTo(42, -27 - bob);
+    ctx.moveTo(28, -25 - bob);
+    ctx.lineTo(41, -22 - bob);
+    ctx.stroke();
+
+    // Front paws
+    ctx.fillStyle = "#e8a15a";
+    ctx.beginPath();
+    ctx.ellipse(4 + run * 3, -12 - bob, 7, 5.5, 0.3, 0, Math.PI * 2);
+    ctx.ellipse(18 - run * 3, -11 - bob, 7, 5.5, -0.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#ffe0b8";
+    ctx.beginPath();
+    ctx.ellipse(4 + run * 3, -11 - bob, 3.5, 2.6, 0.3, 0, Math.PI * 2);
+    ctx.ellipse(18 - run * 3, -10 - bob, 3.5, 2.6, -0.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Tiny tail
+    ctx.fillStyle = "#d48138";
+    ctx.beginPath();
+    ctx.ellipse(-34, -18 - bob, 7, 5, 0.6, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.restore();
