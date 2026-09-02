@@ -1,0 +1,17 @@
+# OS / editor
+Thumbs.db
+Desktop.ini
+.DS_Store
+.vscode/
+.idea/
+
+# Local drafts / unused screenshots
+games-header-draft.png
+Screenshot*.png
+**/Screenshot*.png
+
+# Env / secrets
+.env
+.env.*
+*.pem
+*.key

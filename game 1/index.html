@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Pet Buddy</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="pet-select" id="petSelect">
+    <div class="pet-select-card">
+      <div class="auth-bar">
+        <span class="account-label" id="accountLabel">Playing as Guest</span>
+        <div class="auth-buttons">
+          <button type="button" class="btn auth-btn" id="loginBtn">Log In</button>
+          <button type="button" class="btn auth-btn signup" id="signupBtn">Sign Up</button>
+          <button type="button" class="btn auth-btn is-hidden" id="logoutBtn">Log Out</button>
+        </div>
+      </div>
+      <h1>Choose Your Pet</h1>
+      <p>Pick a buddy to take care of!</p>
+      <div class="pet-choices" id="petChoices">
+        <button type="button" class="pet-choice" data-pet="totoro">
+          <img src="assets/totoro.png" alt="Totoro" />
+          <span>Totoro</span>
+        </button>
+        <button type="button" class="pet-choice" data-pet="duck">
+          <img src="assets/duck.png" alt="Duck" />
+          <span>Duck</span>
+        </button>
+        <button type="button" class="pet-choice" data-pet="kitten">
+          <img src="assets/kitten.png" alt="Kitten" />
+          <span>Kitten</span>
+        </button>
+        <button type="button" class="pet-choice" data-pet="corgi">
+          <img src="assets/corgi.png" alt="Corgi" />
+          <span>Corgi</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="auth-modal is-hidden" id="authModal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+    <div class="auth-modal-card">
+      <button type="button" class="auth-close" id="authClose" aria-label="Close">✕</button>
+      <h2 id="authTitle">Log In</h2>
+      <p class="auth-error" id="authError" hidden></p>
+      <form id="authForm">
+        <label>
+          Username
+          <input type="text" id="authUsername" name="username" autocomplete="username" required minlength="3" />
+        </label>
+        <label>
+          Password
+          <input type="password" id="authPassword" name="password" autocomplete="current-password" required minlength="4" />
+        </label>
+        <label class="auth-confirm is-hidden" id="authConfirmLabel">
+          Confirm password
+          <input type="password" id="authConfirm" name="confirm" autocomplete="new-password" minlength="4" />
+        </label>
+        <button type="submit" class="btn auth-submit" id="authSubmit">Log In</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="app is-hidden" id="gameApp">
+    <header class="header">
+      <div class="title-row">
+        <h1>My Pet Buddy</h1>
+        <div class="header-tools">
+          <span class="account-chip is-hidden" id="gameAccountLabel"></span>
+          <button type="button" class="leave-btn" id="leaveBtn">Leave</button>
+          <button type="button" class="icon-btn" id="muteBtn" aria-label="Mute sounds">🔊</button>
+          <div class="coins" aria-label="Coins">
+            <span aria-hidden="true">🪙</span>
+            <span id="coinValue">40</span>
+          </div>
+        </div>
+      </div>
+      <p class="status-text" id="statusText">Buy supplies for your pet!</p>
+    </header>
+
+    <main class="stage">
+      <div class="pet-area">
+        <div class="pet-wrap" id="petWrap">
+          <img
+            id="pet"
+            class="pet"
+            src="assets/corgi.png"
+            alt="Your pet"
+            draggable="false"
+          />
+          <div class="reaction" id="reaction" aria-hidden="true"></div>
+        </div>
+      </div>
+    </main>
+
+    <section class="stats" aria-label="Pet stats">
+      <div class="stat">
+        <div class="stat-label">
+          <span>Hunger</span>
+          <span id="hungerValue">80</span>
+        </div>
+        <div class="bar"><div class="fill hunger" id="hungerBar"></div></div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">
+          <span>Happiness</span>
+          <span id="happinessValue">80</span>
+        </div>
+        <div class="bar"><div class="fill happiness" id="happinessBar"></div></div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">
+          <span>Energy</span>
+          <span id="energyValue">80</span>
+        </div>
+        <div class="bar"><div class="fill energy" id="energyBar"></div></div>
+      </div>
+    </section>
+
+    <section class="inventory" aria-label="Inventory">
+      <h2>Bag</h2>
+      <div class="inv-row">
+        <span>Food <strong id="foodCount">1</strong></span>
+        <span>Treats <strong id="treatCount">0</strong></span>
+        <span>Toys <strong id="toyCount">0</strong></span>
+      </div>
+    </section>
+
+    <section class="actions" aria-label="Pet actions">
+      <button type="button" class="btn" id="feedBtn">Feed</button>
+      <button type="button" class="btn" id="treatBtn">Treat</button>
+      <button type="button" class="btn" id="playBtn">Play</button>
+      <button type="button" class="btn" id="sleepBtn">Sleep</button>
+      <button type="button" class="btn earn" id="earnBtn">Walk (+coins)</button>
+    </section>
+
+    <section class="shop" aria-label="Pet shop">
+      <h2>Pet Shop</h2>
+      <p class="shop-note">Buy things before you can use them.</p>
+      <div class="shop-grid">
+        <button type="button" class="shop-item" data-item="food">
+          <span class="shop-emoji">🍖</span>
+          <span class="shop-name">Food</span>
+          <span class="shop-price">8 coins</span>
+        </button>
+        <button type="button" class="shop-item" data-item="treat">
+          <span class="shop-emoji">🦴</span>
+          <span class="shop-name">Treat</span>
+          <span class="shop-price">12 coins</span>
+        </button>
+        <button type="button" class="shop-item" data-item="toy">
+          <span class="shop-emoji">🎾</span>
+          <span class="shop-name">Toy</span>
+          <span class="shop-price">12 coins</span>
+        </button>
+        <button type="button" class="shop-item" data-item="bed" id="bedBtn">
+          <span class="shop-emoji">🛏️</span>
+          <span class="shop-name">Cozy Bed</span>
+          <span class="shop-price" id="bedPrice">25 coins</span>
+        </button>
+      </div>
+    </section>
+  </div>
+
+  <script src="auth.js"></script>
+  <script src="sounds.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
