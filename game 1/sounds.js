@@ -1,30 +1,24 @@
 const DogSounds = (() => {
   let ctx = null;
-  let muted = localStorage.getItem("petMuted") === "1";
+  // Sounds are turned off for this game.
+  const muted = true;
+  localStorage.setItem("petMuted", "1");
   let species = "corgi";
 
   function ensure() {
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtx) return null;
-    if (!ctx) ctx = new AudioCtx();
-    if (ctx.state === "suspended") {
-      ctx.resume();
-    }
-    return ctx;
+    return null;
   }
 
   function unlock() {
-    ensure();
+    // No audio.
   }
 
   function isMuted() {
-    return muted;
+    return true;
   }
 
-  function setMuted(value) {
-    muted = Boolean(value);
-    localStorage.setItem("petMuted", muted ? "1" : "0");
-    if (!muted) unlock();
+  function setMuted() {
+    localStorage.setItem("petMuted", "1");
   }
 
   function setSpecies(id) {
