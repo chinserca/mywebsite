@@ -6,6 +6,11 @@ const PRICES = {
 };
 
 const SLEEP_COOLDOWN_MS = 60_000;
+const BED_SLEEP_COOLDOWN_MS = 30_000;
+
+function sleepCooldownMs() {
+  return state.hasBed ? BED_SLEEP_COOLDOWN_MS : SLEEP_COOLDOWN_MS;
+}
 const ACTION_COOLDOWN_MS = 2_000;
 
 const ACTION_LABELS = {
@@ -226,7 +231,8 @@ function isInGame() {
 function canRoam() {
   if (document.hidden || !isInGame()) return false;
   if (remainingMs(state.sleepReadyAt) > 0) return false;
-  const stayPut = ["sit", "nap", "sniff", "scratch", "stretch", "spin"];
+  if (isActing()) return false;
+  const stayPut = ["sit", "nap", "sniff", "scratch", "stretch", "spin", "eat", "sleep", "sleep-toss", "play", "walk"];
   return !stayPut.includes(state.currentAction);
 }
 
@@ -249,13 +255,17 @@ function continueRoaming() {
 function clearDogActionClasses() {
   pet.classList.remove(
     "act-walk",
+    "act-eat",
+    "act-sleep",
+    "act-sleep-toss",
     "act-sniff",
     "act-stretch",
     "act-scratch",
     "act-spin",
     "act-sit",
     "act-nap",
-    "act-zoomies"
+    "act-zoomies",
+    "is-asleep"
   );
 }
 
@@ -263,13 +273,104 @@ function updateMood() {
   if (isActing()) return;
 
   const average = (state.hunger + state.happiness + state.energy) / 3;
-  pet.classList.remove("happy", "sleepy", "sad");
+  pet.classList.remove("happy", "sleepy", "sad", "is-asleep");
 
-  if (isSleeping() || state.energy < 25) {
+  if (remainingMs(state.sleepReadyAt) > 0) {
+    pet.classList.add("is-asleep");
+  } else if (state.currentAction === "nap" || state.energy < 25) {
     pet.classList.add("sleepy");
   } else if (average < 35) {
     pet.classList.add("sad");
   }
+}
+
+function runWalkPath() {
+  const points = [randomRoomPoint(), randomRoomPoint(), randomRoomPoint()];
+  points.forEach((point, index) => {
+    window.setTimeout(() => movePetTo(point.x, point.y, 115), index * 700);
+  });
+}
+
+function settleForSleep() {
+  const bounds = roamBounds();
+  movePetTo((bounds.minX + bounds.maxX) / 2, bounds.maxY * 0.72, 70);
+}
+
+function stopSleepFidgets() {
+  window.clearTimeout(stopSleepFidgets.timer);
+}
+
+function startSleepFidgets() {
+  stopSleepFidgets();
+  if (remainingMs(state.sleepReadyAt) <= 0 || !isInGame()) return;
+
+  stopSleepFidgets.timer = window.setTimeout(() => {
+    if (remainingMs(state.sleepReadyAt) <= 0 || !isInGame()) return;
+
+    clearDogActionClasses();
+    pet.classList.remove("happy", "sleepy", "sad", "is-asleep");
+    pet.classList.add("act-sleep-toss");
+    state.currentAction = "sleep-toss";
+    state.actingUntil = Date.now() + 1000;
+
+    const bounds = roamBounds();
+    const nextX = Math.min(
+      bounds.maxX,
+      Math.max(bounds.minX, state.petX + (Math.random() * 50 - 25))
+    );
+    const nextY = Math.min(
+      bounds.maxY,
+      Math.max(bounds.minY, state.petY + (Math.random() * 24 - 8))
+    );
+    movePetTo(nextX, nextY, 35);
+    showReaction("💤");
+
+    window.setTimeout(() => {
+      if (state.currentAction === "sleep-toss") {
+        finishDogAction();
+        if (remainingMs(state.sleepReadyAt) > 0) {
+          pet.classList.add("is-asleep");
+        }
+      }
+      startSleepFidgets();
+    }, 1000);
+  }, 3500 + Math.random() * 3500);
+}
+
+function performActionMotion(kind) {
+  const configs = {
+    eat: { className: "act-eat", duration: 1400 },
+    play: { className: "act-zoomies", duration: 1800, move: "play" },
+    walk: { className: "act-walk", duration: 2200, move: "walk" },
+    sleep: { className: "act-sleep", duration: 1200, move: "sleep" },
+  };
+  const config = configs[kind];
+  if (!config) return;
+
+  clearDogActionClasses();
+  pet.classList.remove("happy", "sleepy", "sad", "is-asleep");
+  state.currentAction = kind;
+  state.actingUntil = Date.now() + config.duration;
+  pet.classList.add(config.className);
+
+  if (config.move === "walk") {
+    runWalkPath();
+  } else if (config.move === "play") {
+    runZoomies();
+  } else if (config.move === "sleep") {
+    settleForSleep();
+  }
+
+  window.clearTimeout(performActionMotion.timer);
+  performActionMotion.timer = window.setTimeout(() => {
+    if (state.currentAction !== kind) return;
+    finishDogAction();
+    if (kind === "sleep" || remainingMs(state.sleepReadyAt) > 0) {
+      pet.classList.add("is-asleep");
+      startSleepFidgets();
+    }
+    updateMood();
+  }, config.duration);
 }
 
 function render() {
@@ -363,7 +464,7 @@ function feed() {
   statusText.textContent = "Yum! Dinner time.";
   showReaction("🍖");
   DogSounds.eat();
-  celebrate();
+  performActionMotion("eat");
   render();
   saveProgress();
 }
@@ -419,7 +520,7 @@ function play() {
   statusText.textContent = "Fetch! That was fun.";
   showReaction("🎾");
   DogSounds.play();
-  celebrate();
+  performActionMotion("play");
   render();
   saveProgress();
 }
@@ -439,13 +540,13 @@ function sleep() {
   state.energy = clamp(state.energy + energyGain);
   state.hunger = clamp(state.hunger - 3);
   state.happiness = clamp(state.happiness + happinessGain);
-  state.sleepReadyAt = Date.now() + SLEEP_COOLDOWN_MS;
+  state.sleepReadyAt = Date.now() + sleepCooldownMs();
   statusText.textContent = state.hasBed
     ? "Cozy bed nap... zzz"
     : "Nap time... a real bed would help!";
   showReaction("😴");
   DogSounds.sleep();
-  pet.classList.add("sleepy");
+  performActionMotion("sleep");
   render();
   saveProgress();
 }
@@ -458,11 +559,12 @@ function wakeUp() {
   }
 
   state.sleepReadyAt = 0;
-  if (state.currentAction === "nap") {
+  stopSleepFidgets();
+  if (state.currentAction === "nap" || state.currentAction === "sleep" || state.currentAction === "sleep-toss") {
     finishDogAction();
   }
 
-  pet.classList.remove("sleepy");
+  pet.classList.remove("sleepy", "is-asleep", "act-sleep", "act-sleep-toss");
   statusText.textContent = `${petName()} woke up!`;
   showReaction("☀️");
   DogSounds.happy();
@@ -499,7 +601,7 @@ function earn() {
   statusText.textContent = `Nice walk! You earned ${payout} coins.`;
   showReaction("🪙");
   DogSounds.walk();
-  celebrate();
+  performActionMotion("walk");
   render();
   saveProgress();
 }
@@ -899,6 +1001,7 @@ function leaveGame() {
   if (!isInGame()) return;
 
   saveProgress();
+  stopSleepFidgets();
   if (typeof finishDogAction === "function") {
     finishDogAction();
   }

@@ -371,6 +371,11 @@ body {
   animation: snooze 2.8s ease-in-out infinite;
 }
 
+.pet.is-asleep {
+  filter: brightness(0.9) saturate(0.85);
+  animation: sleep-breathe 2.8s ease-in-out infinite;
+}
+
 .pet.sad {
   animation: droop 2.2s ease-in-out infinite;
   filter: grayscale(0.15);
@@ -378,6 +383,20 @@ body {
 
 .pet.act-walk {
   animation: walkbob 0.45s ease-in-out infinite;
+}
+
+.pet.act-eat {
+  animation: eat 1.4s ease-in-out;
+}
+
+.pet.act-sleep {
+  filter: brightness(0.9) saturate(0.85);
+  animation: lie-down 1.1s ease forwards;
+}
+
+.pet.act-sleep-toss {
+  filter: brightness(0.9) saturate(0.85);
+  animation: sleep-toss 1s ease-in-out;
 }
 
 .pet.act-sniff {
@@ -739,6 +758,59 @@ body {
   }
   50% {
     transform: translateY(-12px) rotate(6deg);
+  }
+}
+
+@keyframes eat {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  20% {
+    transform: translateY(14px) rotate(12deg);
+  }
+  40% {
+    transform: translateY(8px) rotate(6deg) scale(1.04);
+  }
+  60% {
+    transform: translateY(16px) rotate(14deg);
+  }
+  80% {
+    transform: translateY(6px) rotate(4deg) scale(1.02);
+  }
+}
+
+@keyframes lie-down {
+  0% {
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+  100% {
+    transform: translateY(24px) rotate(-78deg) scale(0.95, 0.84);
+  }
+}
+
+@keyframes sleep-breathe {
+  0%,
+  100% {
+    transform: translateY(24px) rotate(-78deg) scale(0.95, 0.84);
+  }
+  50% {
+    transform: translateY(26px) rotate(-74deg) scale(0.97, 0.82);
+  }
+}
+
+@keyframes sleep-toss {
+  0% {
+    transform: translateY(24px) rotate(-78deg) scale(0.95, 0.84);
+  }
+  35% {
+    transform: translateY(18px) rotate(-35deg) scale(0.96, 0.88);
+  }
+  70% {
+    transform: translateY(26px) rotate(-105deg) scale(0.94, 0.82);
+  }
+  100% {
+    transform: translateY(24px) rotate(-78deg) scale(0.95, 0.84);
   }
 }
 
