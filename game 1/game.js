@@ -103,6 +103,7 @@ const feedBtn = document.getElementById("feedBtn");
 const treatBtn = document.getElementById("treatBtn");
 const playBtn = document.getElementById("playBtn");
 const sleepBtn = document.getElementById("sleepBtn");
+const wakeBtn = document.getElementById("wakeBtn");
 const earnBtn = document.getElementById("earnBtn");
 const muteBtn = document.getElementById("muteBtn");
 const leaveBtn = document.getElementById("leaveBtn");
@@ -315,6 +316,8 @@ function render() {
     sleepBtn.textContent = "Sleep";
   }
 
+  wakeBtn.disabled = !sleeping;
+
   if (state.hasBed) {
     bedBtn.disabled = true;
     bedPrice.textContent = "Owned";
@@ -447,6 +450,27 @@ function sleep() {
   saveProgress();
 }
 
+function wakeUp() {
+  if (!isSleeping()) {
+    statusText.textContent = `${petName()} is already awake.`;
+    showReaction("☀️");
+    return;
+  }
+
+  state.sleepReadyAt = 0;
+  if (state.currentAction === "nap") {
+    finishDogAction();
+  }
+
+  pet.classList.remove("sleepy");
+  statusText.textContent = `${petName()} woke up!`;
+  showReaction("☀️");
+  DogSounds.happy();
+  celebrate();
+  render();
+  saveProgress();
+}
+
 function earn() {
   if (isSleeping()) {
     statusText.textContent = "Can't walk while sleeping.";
@@ -545,6 +569,7 @@ feedBtn.addEventListener("click", feed);
 treatBtn.addEventListener("click", giveTreat);
 playBtn.addEventListener("click", play);
 sleepBtn.addEventListener("click", sleep);
+wakeBtn.addEventListener("click", wakeUp);
 earnBtn.addEventListener("click", earn);
 
 document.querySelectorAll(".shop-item").forEach((btn) => {

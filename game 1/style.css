@@ -557,6 +557,16 @@ body {
   gap: 10px;
 }
 
+.actions .wake {
+  grid-column: 1 / -1;
+  background: linear-gradient(180deg, #e9c46a, #d4a017);
+  box-shadow: 0 4px 0 #a67c00;
+}
+
+.actions .wake:active {
+  box-shadow: 0 2px 0 #a67c00;
+}
+
 .actions .earn {
   grid-column: 1 / -1;
   background: linear-gradient(180deg, #2a9d8f, #1f7a6f);
