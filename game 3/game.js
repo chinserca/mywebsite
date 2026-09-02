@@ -101,6 +101,7 @@
       timer: rand(40, 90),
       toy: null,
       playT: 0,
+      arrived: false,
       cool: {},
       fed: 0,
     };
@@ -379,6 +380,23 @@
     h.playT = 0;
     h.timer = rand(90, 150);
     h.vx = 0;
+    h.arrived = false;
+  }
+
+  function playStandX(toy) {
+    const id = toy.id;
+    if (id === "water" || id === "flowers" || id === "chew") return toy.x + 18;
+    if (id === "tube") return toy.x - 50;
+    if (id === "slide") return toy.x + 16;
+    return toy.x;
+  }
+
+  function endPlay(h) {
+    h.state = "walk";
+    h.toy = null;
+    h.arrived = false;
+    h.y = world.ground;
+    h.vx = h.facing * 0.9;
   }
 
   function updateHamster(h, dt) {
@@ -400,49 +418,87 @@
       h.playT += dt;
       h.timer -= dt;
       const def = toyDef(h.toy.id);
-      // Approach the same spot used while playing so toys like the water bottle
-      // don't snap the hamster past the target and cause a walk/drink flicker.
-      const standOff = (def.id === "water" || def.id === "flowers" || def.id === "chew") ? 18 : 0;
-      const target = h.toy.x + standOff;
-      if (Math.abs(h.x - target) > 10 && def.id !== "wheel" && def.id !== "tube") {
-        h.vx = Math.sign(target - h.x) * 1.6;
-        h.x += h.vx * dt;
-        h.facing = Math.sign(h.vx) || h.facing;
-        h.y = world.ground;
-      } else {
-        h.vx = 0;
-        if (def.id === "wheel") {
-          h.x = h.toy.x;
-          h.y = world.ground - 28 + Math.sin(h.playT * 0.22) * 18;
-        } else if (def.id === "tube") {
-          const t = (h.playT % 70) / 70;
-          h.x = h.toy.x - 50 + t * 100;
-          h.y = world.ground - 6;
-        } else if (def.id === "house") {
-          h.x = h.toy.x;
+      const target = playStandX(h.toy);
+      // Wheel starts in place. Other toys walk over once, then keep playing
+      // even if the animation moves them away from the approach point.
+      if (!h.arrived && def.id !== "wheel") {
+        if (Math.abs(h.x - target) > 10) {
+          h.vx = Math.sign(target - h.x) * 1.6;
+          h.x += h.vx * dt;
+          h.facing = Math.sign(h.vx) || h.facing;
           h.y = world.ground;
-          h.squash = 0.78 + Math.sin(h.playT * 0.1) * 0.04;
-        } else if (def.id === "sand" || def.id === "balls") {
-          h.x = h.toy.x + Math.sin(h.playT * 0.12) * 16;
-          h.y = world.ground + 4;
-        } else if (def.id === "ladder" || def.id === "platform" || def.id === "slide") {
-          const climb = Math.abs(Math.sin(h.playT * 0.06));
-          h.x = h.toy.x + (def.id === "slide" ? -20 + climb * 40 : 0);
-          h.y = world.ground - climb * 70;
-        } else if (def.id === "bounce") {
-          h.x = h.toy.x;
-          h.y = world.ground - Math.abs(Math.sin(h.playT * 0.18)) * 54;
-        } else if (def.id === "water" || def.id === "flowers" || def.id === "chew") {
-          h.x = target;
-          h.y = world.ground;
+          if (h.timer <= 0 || h.hunger < 28) endPlay(h);
+          return;
         }
+        h.arrived = true;
+        h.playT = 0;
+      } else if (!h.arrived) {
+        h.arrived = true;
+        h.playT = 0;
       }
-      if (h.timer <= 0 || h.hunger < 28) {
-        h.state = "walk";
-        h.toy = null;
+
+      h.vx = 0;
+      if (def.id === "wheel") {
+        h.x = h.toy.x;
+        h.y = world.ground - 28 + Math.sin(h.playT * 0.22) * 18;
+      } else if (def.id === "tube") {
+        // One smooth pass left -> right. No wrap, so no teleport glitch.
+        const dur = 90;
+        const t = Math.min(1, h.playT / dur);
+        h.facing = 1;
+        h.x = h.toy.x - 50 + t * 100;
+        h.y = world.ground - 6;
+        h.squash = t > 0.12 && t < 0.88 ? 0.74 : 1;
+        if (t >= 1 || h.hunger < 28) {
+          endPlay(h);
+          return;
+        }
+      } else if (def.id === "house") {
+        h.x = h.toy.x;
         h.y = world.ground;
-        h.vx = h.facing * 0.9;
+        h.squash = 0.78 + Math.sin(h.playT * 0.1) * 0.04;
+      } else if (def.id === "sand") {
+        h.x = h.toy.x + Math.sin(h.playT * 0.1) * 12;
+        h.y = world.ground;
+      } else if (def.id === "balls") {
+        // Soft nestle/bounce in place. Wide left-right snaps looked like a glitch
+        // against the fixed ball sprites.
+        h.x = h.toy.x + Math.sin(h.playT * 0.05) * 8;
+        h.y = world.ground - Math.abs(Math.sin(h.playT * 0.14)) * 6;
+        h.squash = 0.86 + Math.abs(Math.sin(h.playT * 0.14)) * 0.12;
+      } else if (def.id === "slide") {
+        // Climb once, then slide down once. The old abs(sin) loop sent the
+        // hamster back up the ramp and looked like a teleport glitch.
+        const climbDur = 36;
+        const slideDur = 72;
+        if (h.playT < climbDur) {
+          const t = h.playT / climbDur;
+          h.facing = 1;
+          h.x = h.toy.x + 16;
+          h.y = world.ground - t * 78;
+        } else {
+          const t = Math.min(1, (h.playT - climbDur) / slideDur);
+          h.facing = -1;
+          h.x = h.toy.x + 16 - t * 56;
+          h.y = world.ground - 78 + t * 78;
+          h.squash = 0.92 + t * 0.08;
+          if (t >= 1 || h.hunger < 28) {
+            endPlay(h);
+            return;
+          }
+        }
+      } else if (def.id === "ladder" || def.id === "platform") {
+        const climb = Math.abs(Math.sin(h.playT * 0.06));
+        h.x = h.toy.x;
+        h.y = world.ground - climb * 70;
+      } else if (def.id === "bounce") {
+        h.x = h.toy.x;
+        h.y = world.ground - Math.abs(Math.sin(h.playT * 0.18)) * 54;
+      } else if (def.id === "water" || def.id === "flowers" || def.id === "chew") {
+        h.x = target;
+        h.y = world.ground;
       }
+      if (h.timer <= 0 || h.hunger < 28) endPlay(h);
       return;
     }
 
@@ -557,7 +613,7 @@
     }
   }
 
-  function drawToy(toy, ghost) {
+  function drawToy(toy, ghost, layer = "full") {
     const def = toyDef(toy.id);
     const x = toy.x;
     const y = toy.y;
@@ -656,15 +712,21 @@
       ctx.lineTo(x + 30, y);
       ctx.stroke();
     } else if (toy.id === "balls") {
-      ctx.fillStyle = "#7eb8da";
-      roundRect(x - 50, y - 28, 100, 30, 10);
-      ctx.fill();
-      const colors = ["#e56b6f", "#f4c430", "#7ecf6a", "#7eb8da", "#f0a04b"];
-      for (let i = 0; i < 5; i += 1) {
-        ctx.fillStyle = colors[i];
-        ctx.beginPath();
-        ctx.arc(x - 30 + i * 15, y - 18, 8, 0, Math.PI * 2);
+      if (layer === "full" || layer === "back") {
+        ctx.fillStyle = "#7eb8da";
+        roundRect(x - 50, y - 28, 100, 30, 10);
         ctx.fill();
+      }
+      if (layer === "full" || layer === "front") {
+        const colors = ["#e56b6f", "#f4c430", "#7ecf6a", "#7eb8da", "#f0a04b"];
+        const busy = world.hamsters.some((h) => h.state === "play" && h.toy === toy);
+        for (let i = 0; i < 5; i += 1) {
+          const jiggle = busy ? Math.sin(world.t * 0.25 + i * 1.3) * 2.2 : 0;
+          ctx.fillStyle = colors[i];
+          ctx.beginPath();
+          ctx.arc(x - 30 + i * 15 + jiggle, y - 16 - Math.abs(jiggle), 8, 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
     } else if (toy.id === "water") {
       ctx.fillStyle = "#9fd0ea";
@@ -697,7 +759,7 @@
     }
 
     ctx.globalAlpha = 1;
-    if (!ghost && def) {
+    if (!ghost && def && layer !== "front") {
       ctx.fillStyle = "rgba(74, 52, 40, 0.55)";
       ctx.font = "700 12px Segoe UI, sans-serif";
       ctx.textAlign = "center";
@@ -833,10 +895,16 @@
   function draw() {
     drawBackground();
     const sortedToys = world.toys.slice().sort((a, b) => a.x - b.x);
-    for (const toy of sortedToys) drawToy(toy, false);
+    for (const toy of sortedToys) {
+      drawToy(toy, false, toy.id === "balls" ? "back" : "full");
+    }
     drawPlaceGhost();
     const sorted = world.hamsters.slice().sort((a, b) => a.y - b.y);
     for (const h of sorted) drawHamster(h);
+    // Balls draw above the hamster so it looks tucked into the pit.
+    for (const toy of sortedToys) {
+      if (toy.id === "balls") drawToy(toy, false, "front");
+    }
     drawBits();
   }
 
