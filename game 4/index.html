@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tunnel Maze Habitat</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="title-row">
+        <h1>Tunnel Maze</h1>
+        <div class="header-tools">
+          <a class="leave-btn" href="../index.html">Leave</a>
+          <button type="button" class="icon-btn" id="muteBtn" aria-label="Mute sounds">🔊</button>
+          <div class="stat-chip" aria-label="Seeds">
+            <span>Seeds</span>
+            <strong id="seedValue">30</strong>
+          </div>
+          <div class="stat-chip" aria-label="Connected tiles">
+            <span>Path</span>
+            <strong id="pathValue">0</strong>
+          </div>
+          <div class="stat-chip" aria-label="Hamsters">
+            <span>Hamsters</span>
+            <strong id="hamsterValue">1</strong>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="layout">
+      <div class="stage">
+        <canvas id="game" width="840" height="600" aria-label="Hamster tunnel maze"></canvas>
+
+        <div class="overlay" id="titleScreen">
+          <img class="cover" src="assets/cover.svg" alt="Hamster in a tunnel maze" />
+          <h2>Tunnel Maze Habitat</h2>
+          <p>Build a connected tunnel maze. Hamsters find food on their own.</p>
+          <ul class="how">
+            <li>Buy tiles, then click the grid to place them</li>
+            <li>Press <kbd>R</kbd> to rotate a tunnel before placing</li>
+            <li>Place spawners to bring more hamsters into the maze</li>
+          </ul>
+          <div class="title-actions">
+            <button type="button" class="btn play" id="playBtn">Play</button>
+            <button type="button" class="btn ghost is-hidden" id="newParkBtn">New maze</button>
+          </div>
+        </div>
+
+        <div class="overlay is-hidden" id="pauseScreen">
+          <h2>Paused</h2>
+          <p>The maze is quiet for a moment.</p>
+          <button type="button" class="btn play" id="resumeBtn">Resume</button>
+        </div>
+
+        <div class="toast is-hidden" id="toast" role="status"></div>
+      </div>
+
+      <aside class="panel">
+        <h2>Build kit</h2>
+        <p class="shop-note" id="shopNote">Connect tunnels so hamsters can reach feeders.</p>
+        <div class="shop-tabs" role="tablist">
+          <button type="button" class="shop-tab is-active" data-tab="tunnels">Tunnels</button>
+          <button type="button" class="shop-tab" data-tab="feeders">Feeders</button>
+          <button type="button" class="shop-tab" data-tab="spawners">Spawners</button>
+          <button type="button" class="shop-tab" data-tab="rooms">Rooms</button>
+          <button type="button" class="shop-tab" data-tab="extras">Extras</button>
+        </div>
+        <div class="shop-grid" id="shopGrid"></div>
+        <p class="rotate-hint" id="rotateHint">Selected tunnel · press <kbd>R</kbd> to rotate</p>
+      </aside>
+    </div>
+
+    <p class="hint" id="hintText">Pick a tile and click the grid · R rotates · Esc pauses</p>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
