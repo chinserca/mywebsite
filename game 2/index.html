@@ -28,6 +28,10 @@
             </div>
             <strong id="healthValue">100</strong>
           </div>
+          <div class="stat-chip online is-hidden" id="onlineChip" aria-label="Online players">
+            <span>Online</span>
+            <strong id="onlineCount">1</strong>
+          </div>
           <div class="stat-chip" aria-label="Score">
             <span>Score</span>
             <strong id="scoreValue">0</strong>
@@ -49,11 +53,31 @@
         <p>Every run builds a brand-new random map. Jump gaps, climb ledges, smash enemies!</p>
         <ul class="how">
           <li><strong>A</strong> / <strong>D</strong> move · <strong>W</strong> jump</li>
-          <li><strong>S</strong> hit enemies before they hit you</li>
+          <li><strong>S</strong> hit enemies — watch their health bars</li>
           <li>Grab hearts, carrots, and berries to refill health</li>
           <li>The hamster stays still until you press a key</li>
         </ul>
-        <button type="button" class="btn play start" id="playBtn">Start</button>
+        <div class="mode-row">
+          <button type="button" class="btn play start" id="playBtn">Play Solo</button>
+          <button type="button" class="btn play start server" id="serverBtn">Join Server</button>
+        </div>
+      </div>
+
+      <div class="overlay is-hidden" id="serverScreen">
+        <h2>Hamster Nests</h2>
+        <p>Pick a nest to go in. Other hamsters in the same nest can see you.</p>
+        <label class="field">Your name
+          <input id="playerName" maxlength="14" placeholder="Hamster" autocomplete="nickname" />
+        </label>
+        <p class="server-status" id="serverStatus">Looking for nests...</p>
+        <ul class="server-list" id="serverList"></ul>
+        <label class="field">Or make a nest
+          <input id="customRoom" maxlength="16" placeholder="secret-nest" autocomplete="off" />
+        </label>
+        <div class="mode-row">
+          <button type="button" class="btn play" id="customJoinBtn">Go in</button>
+          <button type="button" class="btn back" id="serverBackBtn">Back</button>
+        </div>
       </div>
 
       <div class="overlay is-hidden" id="pauseScreen">

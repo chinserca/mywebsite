@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "command": ".cursor/hooks/start-game-server.cmd",
+        "timeout": 20
+      }
+    ]
+  }
+}

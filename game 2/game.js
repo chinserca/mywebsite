@@ -16,10 +16,22 @@
   const toastEl = document.getElementById("toast");
   const healthFill = document.getElementById("healthFill");
   const healthValue = document.getElementById("healthValue");
+  const serverScreen = document.getElementById("serverScreen");
+  const serverBtn = document.getElementById("serverBtn");
+  const serverBackBtn = document.getElementById("serverBackBtn");
+  const serverStatus = document.getElementById("serverStatus");
+  const serverList = document.getElementById("serverList");
+  const playerNameInput = document.getElementById("playerName");
+  const customRoomInput = document.getElementById("customRoom");
+  const customJoinBtn = document.getElementById("customJoinBtn");
+  const onlineChip = document.getElementById("onlineChip");
+  const onlineCount = document.getElementById("onlineCount");
+  const hintText = document.getElementById("hintText");
 
   const BEST_KEY = "hamsterDashBest";
   const STAGE_KEY = "hamsterDashBestStage";
   const MUTE_KEY = "hamsterDashMuted";
+  const NAME_KEY = "hamsterDashName";
   const STATE = { TITLE: "title", PLAY: "play", PAUSE: "pause", OVER: "over" };
   const BASE_GROUND = 430;
 
@@ -89,6 +101,7 @@
   const ENEMY_POINTS = { bug: 25, sock: 30, crate: 40, bat: 45, cat: 70 };
   const ENEMY_DAMAGE = { bug: 8, sock: 10, crate: 12, bat: 10, cat: 16 };
   const ENEMY_SPEED = { bug: 1.6, sock: 1.3, crate: 0.9, bat: 2.1, cat: 1.8 };
+  const ENEMY_HP = { bug: 2, sock: 3, crate: 4, bat: 2, cat: 5 };
   const MAX_HP = 100;
 
   const world = {
@@ -117,7 +130,26 @@
     muted: localStorage.getItem(MUTE_KEY) === "1",
     audio: null,
     keys: { left: false, right: false, jump: false },
+    rng: Math.random,
   };
+
+  const net = {
+    online: false,
+    id: "",
+    token: "",
+    room: "nest",
+    roomName: "",
+    seed: 0,
+    name: localStorage.getItem(NAME_KEY) || "",
+    tint: "#e89a4a",
+    others: [],
+    count: 1,
+    timer: 0,
+    busy: false,
+    listTimer: 0,
+  };
+
+  if (playerNameInput) playerNameInput.value = net.name;
 
   bestEl.textContent = String(world.best);
   updateStageHud();
@@ -190,13 +222,32 @@
       facing: 1,
       attack: 0,
       attackCool: 0,
+      swing: 0,
       hp: MAX_HP,
       hurt: 0,
     };
   }
 
+  function makeRng(seed) {
+    let a = seed >>> 0;
+    return function () {
+      a += 0x6D2B79F5;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = t + Math.imul(t ^ (t >>> 7), 61 | t) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function roll() {
+    return world.rng();
+  }
+
+  function chance(n) {
+    return roll() < n;
+  }
+
   function rand(min, max) {
-    return min + Math.random() * (max - min);
+    return min + roll() * (max - min);
   }
 
   function randInt(min, max) {
@@ -205,7 +256,7 @@
 
   function pickEnemyType(weights) {
     const entries = Object.entries(weights);
-    let roll = Math.random();
+    let roll = world.rng();
     let total = 0;
     for (const [type, weight] of entries) {
       total += weight;
@@ -247,11 +298,68 @@
       h,
       bob: rand(0, Math.PI * 2),
       baseY: y,
-      hp: type === "cat" ? 2 : 1,
+      vy: 0,
+      onGround: type !== "bat",
+      maxHp: ENEMY_HP[type] || 2,
+      hp: ENEMY_HP[type] || 2,
+      hurt: 0,
+      hitSwing: -1,
       facing: -1,
       attack: 0,
       attackCool: rand(20, 50),
     });
+  }
+
+  function platformTopUnder(x, w, nearY, slack = 14) {
+    const inset = Math.min(10, w * 0.25);
+    const left = x + inset;
+    const right = x + w - inset;
+    let best = null;
+    for (const p of world.platforms) {
+      if (right <= p.x + 2 || left >= p.x + p.w - 2) continue;
+      if (nearY != null && Math.abs(p.y - nearY) > slack) continue;
+      if (best === null || p.y < best) best = p.y;
+    }
+    return best;
+  }
+
+  function resolveEnemyGround(obs, dt) {
+    if (obs.type === "bat") {
+      obs.onGround = false;
+      return;
+    }
+    const prevY = obs.y;
+    const standing = platformTopUnder(obs.x, obs.w, obs.y, 14);
+    if (standing !== null && obs.vy >= 0 && Math.abs(obs.y - standing) <= 14) {
+      obs.y = standing;
+      obs.baseY = standing;
+      obs.vy = 0;
+      obs.onGround = true;
+      return;
+    }
+
+    obs.onGround = false;
+    obs.vy += 0.72 * dt;
+    const nextY = obs.y + obs.vy * dt;
+    let land = null;
+    const inset = Math.min(10, obs.w * 0.25);
+    const left = obs.x + inset;
+    const right = obs.x + obs.w - inset;
+    for (const p of world.platforms) {
+      if (right <= p.x + 2 || left >= p.x + p.w - 2) continue;
+      if (prevY <= p.y + 6 && nextY >= p.y) {
+        if (land === null || p.y < land) land = p.y;
+      }
+    }
+    if (land !== null) {
+      obs.y = land;
+      obs.baseY = land;
+      obs.vy = 0;
+      obs.onGround = true;
+      return;
+    }
+    obs.y = nextY;
+    obs.baseY = nextY;
   }
 
   function addSeedsOn(top, x, count) {
@@ -260,20 +368,20 @@
         x: x + i * 28,
         y: top - rand(28, 70),
         r: 12,
-        gold: Math.random() < 0.15,
+        gold: chance(0.15),
         spin: rand(0, Math.PI),
       });
     }
   }
 
   function addHealthPickup(top, x) {
-    const roll = Math.random();
+    const pick = roll();
     let kind = "berry";
     let heal = 12;
-    if (roll < 0.28) {
+    if (pick < 0.28) {
       kind = "heart";
       heal = 30;
-    } else if (roll < 0.62) {
+    } else if (pick < 0.62) {
       kind = "carrot";
       heal = 18;
     }
@@ -289,39 +397,39 @@
   function generateChunk() {
     const stage = stageDef();
     const startX = world.genX;
-    const roll = Math.random();
+    const pick = roll();
     let width = 0;
 
     // Safe flat ground early on
     if (startX < world.width + 80) {
       width = randInt(260, 360);
       addPlatform(startX, BASE_GROUND, width, 110);
-      if (Math.random() < 0.5) addSeedsOn(BASE_GROUND, startX + 80, randInt(1, 3));
-      if (Math.random() < 0.35) addHealthPickup(BASE_GROUND, startX + 140);
+      if (roll() < 0.5) addSeedsOn(BASE_GROUND, startX + 80, randInt(1, 3));
+      if (roll() < 0.35) addHealthPickup(BASE_GROUND, startX + 140);
       world.genX = startX + width;
       return;
     }
 
-    if (roll < stage.gapChance) {
+    if (pick < stage.gapChance) {
       // Gap then landing pad
       const gap = randInt(70, 110 + world.stage * 8);
       const land = randInt(140, 220);
       addPlatform(startX + gap, BASE_GROUND, land, 110);
-      if (Math.random() < 0.7) {
+      if (roll() < 0.7) {
         addEnemyOn(BASE_GROUND, startX + gap + land * 0.45, pickEnemyType(stage.enemies));
       }
-      if (Math.random() < 0.8) addSeedsOn(BASE_GROUND, startX + gap + 30, randInt(1, 3));
-      if (Math.random() < 0.4) addHealthPickup(BASE_GROUND, startX + gap + land * 0.7);
+      if (roll() < 0.8) addSeedsOn(BASE_GROUND, startX + gap + 30, randInt(1, 3));
+      if (roll() < 0.4) addHealthPickup(BASE_GROUND, startX + gap + land * 0.7);
       // Optional floating bridge over gap
-      if (Math.random() < 0.45) {
+      if (roll() < 0.45) {
         const floatTop = BASE_GROUND - randInt(70, 130);
         const floatW = Math.min(gap + 40, randInt(90, 140));
         addPlatform(startX + gap * 0.2, floatTop, floatW, 22);
         addSeedsOn(floatTop, startX + gap * 0.25, randInt(1, 2));
-        if (Math.random() < 0.5) addHealthPickup(floatTop, startX + gap * 0.4);
+        if (roll() < 0.5) addHealthPickup(floatTop, startX + gap * 0.4);
       }
       width = gap + land;
-    } else if (roll < stage.gapChance + stage.floatChance) {
+    } else if (pick < stage.gapChance + stage.floatChance) {
       // Stepped / floating platforms
       const groundW = randInt(160, 240);
       addPlatform(startX, BASE_GROUND, groundW, 110);
@@ -330,20 +438,20 @@
       const stepX = startX + randInt(40, 90);
       addPlatform(stepX, stepTop, stepW, 22);
       addSeedsOn(stepTop, stepX + 20, randInt(1, 3));
-      if (Math.random() < 0.45) addHealthPickup(stepTop, stepX + stepW * 0.35);
-      if (Math.random() < 0.65) {
+      if (roll() < 0.45) addHealthPickup(stepTop, stepX + stepW * 0.35);
+      if (roll() < 0.65) {
         addEnemyOn(stepTop, stepX + stepW * 0.5, pickEnemyType(stage.enemies));
       }
-      if (Math.random() < 0.4 + world.stage * 0.05) {
+      if (roll() < 0.4 + world.stage * 0.05) {
         const highTop = stepTop - randInt(50, 90);
         addPlatform(stepX + randInt(40, 90), highTop, randInt(80, 130), 22);
         addSeedsOn(highTop, stepX + 50, 1);
       }
-      if (Math.random() < 0.5) {
+      if (roll() < 0.5) {
         addEnemyOn(BASE_GROUND, startX + groundW * 0.7, pickEnemyType(stage.enemies));
       }
       width = Math.max(groundW, stepX + stepW - startX + 40);
-    } else if (roll < stage.gapChance + stage.floatChance + 0.15) {
+    } else if (pick < stage.gapChance + stage.floatChance + 0.15) {
       // Enemy gauntlet on flat ground
       width = randInt(220, 320);
       addPlatform(startX, BASE_GROUND, width, 110);
@@ -356,7 +464,7 @@
         );
       }
       addSeedsOn(BASE_GROUND, startX + 40, randInt(2, 4));
-      if (Math.random() < 0.55) addHealthPickup(BASE_GROUND, startX + width * 0.8);
+      if (roll() < 0.55) addHealthPickup(BASE_GROUND, startX + width * 0.8);
     } else {
       // Mixed flat with small pits and a mid ledge
       width = randInt(240, 340);
@@ -365,14 +473,14 @@
       const right = width - left - pit;
       addPlatform(startX, BASE_GROUND, left, 110);
       if (right > 60) addPlatform(startX + left + pit, BASE_GROUND, right, 110);
-      if (Math.random() < 0.7) {
+      if (roll() < 0.7) {
         addPlatform(startX + left - 10, BASE_GROUND - randInt(55, 100), pit + 40, 22);
       }
-      if (Math.random() < 0.55) {
+      if (roll() < 0.55) {
         addEnemyOn(BASE_GROUND, startX + left * 0.5, pickEnemyType(stage.enemies));
       }
       addSeedsOn(BASE_GROUND, startX + 20, randInt(1, 3));
-      if (Math.random() < 0.4) addHealthPickup(BASE_GROUND, startX + left * 0.7);
+      if (roll() < 0.4) addHealthPickup(BASE_GROUND, startX + left * 0.7);
     }
 
     world.genX = startX + width;
@@ -398,6 +506,7 @@
     world.dust = [];
     world.hits = [];
     world.platforms = [];
+    world.rng = net.online ? makeRng(net.seed) : Math.random;
     world.genX = -40;
     world.distance = 0;
     world.toastAt = 0;
@@ -415,19 +524,172 @@
     newBest.hidden = true;
     updateStageHud();
     showScreen(null);
-    showToast("Stage 1: Sunny Yard");
+    showToast(net.online ? `Joined ${net.roomName}` : "Stage 1: Sunny Yard");
+    updateOnlineHud();
+    updateHint();
   }
 
   function showScreen(which) {
     titleScreen.classList.toggle("is-hidden", which !== "title");
+    serverScreen.classList.toggle("is-hidden", which !== "server");
     pauseScreen.classList.toggle("is-hidden", which !== "pause");
     overScreen.classList.toggle("is-hidden", which !== "over");
+    if (which === "server") refreshServerList();
+  }
+
+  function updateOnlineHud() {
+    onlineChip.classList.toggle("is-hidden", !net.online);
+    onlineCount.textContent = String(Math.max(1, net.count));
+  }
+
+  function updateHint() {
+    hintText.textContent = net.online
+      ? "A D move · W jump · S hit · Esc pause · other hamsters share this nest"
+      : "A D move · W jump · S hit · Esc pause";
+  }
+
+  function playerName() {
+    const typed = (playerNameInput.value || "").trim();
+    return typed.slice(0, 14) || "Hamster";
+  }
+
+  let lastRoomKey = "";
+
+  async function refreshServerList() {
+    if (!serverList.children.length) serverStatus.textContent = "Looking for nests...";
+    try {
+      const res = await fetch("/nest/rooms");
+      const data = await res.json();
+      const rooms = Array.isArray(data.rooms) ? data.rooms : data.rooms ? [data.rooms] : [];
+      const key = rooms.map((room) => `${room.id}:${room.players}`).join("|");
+      if (!rooms.length) {
+        lastRoomKey = "";
+        serverList.innerHTML = "";
+        serverStatus.textContent = "No nests yet. Make one below.";
+        return;
+      }
+      serverStatus.textContent = "Pick a nest and go in.";
+      if (key === lastRoomKey && serverList.children.length) return;
+      lastRoomKey = key;
+      serverList.innerHTML = "";
+      for (const room of rooms) {
+        const item = document.createElement("li");
+        const meta = document.createElement("div");
+        meta.className = "nest-meta";
+        const title = document.createElement("strong");
+        title.textContent = room.name;
+        const count = document.createElement("span");
+        const n = room.players || 0;
+        count.textContent = n === 1 ? "1 hamster inside" : `${n} hamsters inside`;
+        meta.append(title, count);
+        const go = document.createElement("button");
+        go.type = "button";
+        go.className = "btn play";
+        go.textContent = "Go in";
+        go.addEventListener("click", () => joinServer(room.id));
+        item.append(meta, go);
+        serverList.append(item);
+      }
+    } catch {
+      serverStatus.textContent = "Could not find the nest server. Start the game server first.";
+    }
+  }
+
+  async function joinServer(roomId) {
+    const name = playerName();
+    net.name = name;
+    localStorage.setItem(NAME_KEY, name);
+    serverStatus.textContent = "Going in...";
+    try {
+      const res = await fetch("/nest/join", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ room: roomId || "nest", name }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error("join failed");
+      net.online = true;
+      net.id = data.id;
+      net.token = data.token;
+      net.room = data.room;
+      net.roomName = data.roomName;
+      net.seed = Number(data.seed) || 1;
+      net.tint = data.tint || "#e89a4a";
+      net.name = data.name || name;
+      net.others = [];
+      net.count = 1;
+      startGame();
+    } catch {
+      net.online = false;
+      serverStatus.textContent = "Could not go in. Is the game server running?";
+    }
+  }
+
+  async function leaveServer() {
+    if (!net.online) return;
+    const payload = JSON.stringify({ id: net.id, token: net.token, room: net.room });
+    net.online = false;
+    net.others = [];
+    net.count = 1;
+    updateOnlineHud();
+    updateHint();
+    try {
+      await fetch("/nest/leave", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: payload,
+      });
+    } catch {
+      // leave quietly
+    }
+  }
+
+  async function sendNetUpdate() {
+    if (!net.online || net.busy) return;
+    const h = world.hamster;
+    if (!h) return;
+    net.busy = true;
+    try {
+      const res = await fetch("/nest/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: net.id,
+          token: net.token,
+          room: net.room,
+          worldX: world.distance + h.x,
+          y: h.y,
+          facing: h.facing,
+          hp: h.hp,
+          run: h.run,
+          squash: h.squash,
+          attack: h.attack,
+          hurt: h.hurt,
+          score: world.score,
+          alive: world.state === STATE.PLAY,
+        }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        net.others = Array.isArray(data.players) ? data.players : data.players ? [data.players] : [];
+        net.count = data.count || 1;
+        updateOnlineHud();
+      }
+    } catch {
+      // keep last seen hamsters
+    }
+    net.busy = false;
   }
 
   function startGame() {
     unlockAudio();
     playTone(520, 340, 0.12, 0.08);
     resetPlay();
+  }
+
+  function startSolo() {
+    leaveServer();
+    startGame();
   }
 
   function checkStageUnlock() {
@@ -486,6 +748,27 @@
     playTone(420, 640, 0.1, 0.06);
   }
 
+  function hurtEnemy(obs) {
+    const h = world.hamster;
+    if (!h) return false;
+    if (obs.hitSwing === h.swing) return false;
+    obs.hitSwing = h.swing;
+    obs.hp -= 1;
+    obs.hurt = 14;
+    obs.x += h.facing * 22;
+    world.hits.push({
+      x: obs.x + obs.w / 2,
+      y: obs.y - obs.h / 2,
+      life: 10,
+    });
+    if (obs.hp > 0) {
+      playTone(480, 360, 0.07, 0.05);
+      return false;
+    }
+    smashEnemy(obs);
+    return true;
+  }
+
   function smashEnemy(obs) {
     const points = ENEMY_POINTS[obs.type] || 25;
     world.score += points;
@@ -512,6 +795,7 @@
     const h = world.hamster;
     if (!h || world.state !== STATE.PLAY) return;
     if (h.attackCool > 0 || h.attack > 0) return;
+    h.swing += 1;
     h.attack = 12;
     h.attackCool = 18;
     h.squash = 1.12;
@@ -521,15 +805,11 @@
     let smashed = 0;
     world.obstacles = world.obstacles.filter((obs) => {
       if (!hitBox(hit, obstacleBox(obs))) return true;
-      obs.hp -= 1;
-      if (obs.hp > 0) {
-        obs.x += h.facing * 28;
-        world.hits.push({ x: obs.x + obs.w / 2, y: obs.y - obs.h / 2, life: 10 });
-        return true;
+      if (hurtEnemy(obs)) {
+        smashed += 1;
+        return false;
       }
-      smashed += 1;
-      smashEnemy(obs);
-      return false;
+      return true;
     });
     if (smashed > 0) playTone(700, 980, 0.1, 0.06);
   }
@@ -617,8 +897,25 @@
 
   function ensurePlaying() {
     unlockAudio();
+    if (!serverScreen.classList.contains("is-hidden")) return;
     if (world.state === STATE.TITLE || world.state === STATE.OVER) startGame();
     else if (world.state === STATE.PAUSE) resumeGame();
+  }
+
+  function tickNet(dt) {
+    if (!serverScreen.classList.contains("is-hidden")) {
+      net.listTimer -= dt;
+      if (net.listTimer <= 0) {
+        net.listTimer = 90;
+        refreshServerList();
+      }
+    }
+    if (!net.online) return;
+    net.timer -= dt;
+    if (net.timer <= 0) {
+      net.timer = 8;
+      sendNetUpdate();
+    }
   }
 
   function resolvePlatforms(h, dt) {
@@ -659,6 +956,7 @@
 
     if (world.state !== STATE.PLAY) {
       world.t += dt * 0.35;
+      tickNet(dt);
       return;
     }
 
@@ -741,11 +1039,10 @@
       obs.bob += dt * 0.15;
       if (obs.type === "bat") {
         obs.y = obs.baseY + Math.sin(obs.bob) * 14;
-      } else if (obs.type === "bug") {
-        obs.y = obs.baseY - Math.abs(Math.sin(obs.bob)) * 8;
       }
       if (obs.attack > 0) obs.attack -= dt;
       if (obs.attackCool > 0) obs.attackCool -= dt;
+      if (obs.hurt > 0) obs.hurt -= dt;
 
       const dx = h.x - (obs.x + obs.w / 2);
       const dist = Math.abs(dx);
@@ -753,13 +1050,18 @@
       if (onScreen && dist < 260) {
         obs.facing = dx >= 0 ? 1 : -1;
         if (dist > 42) {
-          obs.x += obs.facing * (ENEMY_SPEED[obs.type] || 1.4) * dt;
+          const step = obs.facing * (ENEMY_SPEED[obs.type] || 1.4) * dt;
+          const nextX = obs.x + step;
+          const canFly = obs.type === "bat";
+          const staysGrounded = obs.onGround && platformTopUnder(nextX, obs.w, obs.y, 14) !== null;
+          if (canFly || staysGrounded) obs.x = nextX;
         }
         if (dist < 70 && obs.attackCool <= 0 && obs.attack <= 0) {
           obs.attack = 14;
           obs.attackCool = obs.type === "cat" ? 48 : 36;
         }
       }
+      resolveEnemyGround(obs, dt);
       if (obs.attack > 4 && obs.attack < 12 && h.hurt <= 0) {
         if (hitBox(hamsterBox(), enemyAttackBox(obs))) {
           hurtHamster(ENEMY_DAMAGE[obs.type] || 8, obs.x);
@@ -771,7 +1073,7 @@
     for (const item of world.pickups) item.bob += 0.1 * dt;
 
     world.platforms = world.platforms.filter((p) => p.x + p.w > -80);
-    world.obstacles = world.obstacles.filter((obs) => obs.x + obs.w > -40);
+    world.obstacles = world.obstacles.filter((obs) => obs.x + obs.w > -40 && obs.y < world.height + 80);
     world.seeds = world.seeds.filter((seed) => seed.x > -30);
     world.pickups = world.pickups.filter((item) => item.x > -30);
     fillMapAhead();
@@ -789,14 +1091,7 @@
       const hit = attackBox();
       world.obstacles = world.obstacles.filter((obs) => {
         if (!hitBox(hit, obstacleBox(obs))) return true;
-        obs.hp -= 1;
-        if (obs.hp > 0) {
-          obs.x += h.facing * 28;
-          world.hits.push({ x: obs.x + obs.w / 2, y: obs.y - obs.h / 2, life: 10 });
-          return true;
-        }
-        smashEnemy(obs);
-        return false;
+        return !hurtEnemy(obs);
       });
     }
 
@@ -837,6 +1132,8 @@
       scoreEl.textContent = String(world.score);
       checkStageUnlock();
     }
+
+    tickNet(dt);
   }
 
   function roundRect(x, y, w, h, r) {
@@ -982,7 +1279,8 @@
 
   function drawObstacle(obs) {
     const x = obs.x;
-    const y = obs.y - obs.h;
+    const hop = obs.type === "bug" && obs.onGround ? Math.abs(Math.sin(obs.bob)) * 8 : 0;
+    const y = obs.y - hop - obs.h;
     const cx = x + obs.w / 2;
     const cy = y + obs.h / 2;
 
@@ -1001,7 +1299,7 @@
       ctx.arc(cx - 6, cy - 2, 2.4, 0, Math.PI * 2);
       ctx.arc(cx + 6, cy - 2, 2.4, 0, Math.PI * 2);
       ctx.fill();
-      drawEnemyStrike(obs);
+      finishEnemyDraw(obs);
       return;
     }
 
@@ -1017,7 +1315,7 @@
       ctx.arc(cx - 6, cy, 2.5, 0, Math.PI * 2);
       ctx.arc(cx + 6, cy, 2.5, 0, Math.PI * 2);
       ctx.fill();
-      drawEnemyStrike(obs);
+      finishEnemyDraw(obs);
       return;
     }
 
@@ -1039,7 +1337,7 @@
       ctx.arc(cx - 7, cy - 2, 2.5, 0, Math.PI * 2);
       ctx.arc(cx + 7, cy - 2, 2.5, 0, Math.PI * 2);
       ctx.fill();
-      drawEnemyStrike(obs);
+      finishEnemyDraw(obs);
       return;
     }
 
@@ -1061,7 +1359,7 @@
       ctx.arc(cx - 4, cy, 2.2, 0, Math.PI * 2);
       ctx.arc(cx + 4, cy, 2.2, 0, Math.PI * 2);
       ctx.fill();
-      drawEnemyStrike(obs);
+      finishEnemyDraw(obs);
       return;
     }
 
@@ -1082,11 +1380,55 @@
     ctx.arc(cx - 8, cy + 2, 3, 0, Math.PI * 2);
     ctx.arc(cx + 8, cy + 2, 3, 0, Math.PI * 2);
     ctx.fill();
-    if (obs.hp > 1) {
-      ctx.fillStyle = "rgba(255,255,255,0.35)";
-      ctx.fillRect(x + 8, y + 6, obs.w - 16, 4);
-    }
+    finishEnemyDraw(obs);
+  }
+
+  function finishEnemyDraw(obs) {
+    drawEnemyHurtFlash(obs);
     drawEnemyStrike(obs);
+    drawEnemyHealth(obs);
+  }
+
+  function drawEnemyHurtFlash(obs) {
+    if (!obs.hurt || obs.hurt <= 0) return;
+    const hop = obs.type === "bug" && obs.onGround ? Math.abs(Math.sin(obs.bob)) * 8 : 0;
+    const x = obs.x - 3;
+    const y = obs.y - hop - obs.h - 3;
+    ctx.save();
+    ctx.globalAlpha = Math.min(0.5, obs.hurt / 14);
+    ctx.fillStyle = "#fb7185";
+    roundRect(x, y, obs.w + 6, obs.h + 6, 10);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawEnemyHealth(obs) {
+    const hop = obs.type === "bug" && obs.onGround ? Math.abs(Math.sin(obs.bob)) * 8 : 0;
+    const max = Math.max(1, obs.maxHp || obs.hp || 1);
+    const pct = Math.max(0, Math.min(1, obs.hp / max));
+    const barW = Math.max(34, obs.w);
+    const barH = 8;
+    const bx = obs.x + obs.w / 2 - barW / 2;
+    const by = obs.y - hop - obs.h - 16;
+
+    ctx.save();
+    ctx.fillStyle = "rgba(42, 33, 28, 0.72)";
+    roundRect(bx - 2, by - 2, barW + 4, barH + 4, 5);
+    ctx.fill();
+    ctx.fillStyle = "#4a3428";
+    roundRect(bx, by, barW, barH, 4);
+    ctx.fill();
+    if (pct > 0) {
+      ctx.fillStyle = pct > 0.55 ? "#86ef64" : pct > 0.3 ? "#f5d06a" : "#fb7185";
+      roundRect(bx, by, Math.max(4, barW * pct), barH, 4);
+      ctx.fill();
+    }
+    ctx.fillStyle = "#4a3428";
+    ctx.font = "700 11px Segoe UI, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+    ctx.fillText(`${Math.max(0, Math.ceil(obs.hp))}/${max}`, bx + barW / 2, by - 3);
+    ctx.restore();
   }
 
   function drawEnemyStrike(obs) {
@@ -1227,6 +1569,48 @@
     ctx.beginPath();
     ctx.ellipse(-34, -18 - bob, 7, 5, 0.6, 0, Math.PI * 2);
     ctx.fill();
+
+    if (h.tint) {
+      ctx.fillStyle = h.tint;
+      ctx.beginPath();
+      ctx.ellipse(2, -44 - bob, 16, 5.5, -0.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.restore();
+
+    if (h.name) {
+      ctx.save();
+      ctx.font = "700 14px Segoe UI, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillStyle = "rgba(255, 250, 243, 0.92)";
+      ctx.strokeStyle = "rgba(74, 52, 40, 0.35)";
+      ctx.lineWidth = 4;
+      ctx.strokeText(h.name, h.x, h.y - 78);
+      ctx.fillStyle = "#4a3428";
+      ctx.fillText(h.name, h.x, h.y - 78);
+      ctx.restore();
+    }
+  }
+
+  function drawRemoteHamster(player) {
+    const screenX = player.worldX - world.distance;
+    if (screenX < -90 || screenX > world.width + 90) return;
+    ctx.save();
+    ctx.globalAlpha = player.alive === false ? 0.4 : 0.92;
+    drawHamster({
+      x: screenX,
+      y: player.y,
+      run: player.run || 0,
+      onGround: true,
+      vy: 0,
+      squash: player.squash || 1,
+      facing: player.facing >= 0 ? 1 : -1,
+      attack: player.attack || 0,
+      hurt: player.hurt || 0,
+      tint: player.tint,
+      name: player.name,
+    });
     ctx.restore();
   }
 
@@ -1253,8 +1637,19 @@
     for (const obs of world.obstacles) drawObstacle(obs);
     drawDust();
     drawHits();
-    if (world.hamster) drawHamster(world.hamster);
-    else {
+    if (net.online) {
+      for (const player of net.others) drawRemoteHamster(player);
+    }
+    if (world.hamster) {
+      if (net.online) {
+        world.hamster.name = net.name;
+        world.hamster.tint = net.tint;
+      } else {
+        world.hamster.name = "";
+        world.hamster.tint = "";
+      }
+      drawHamster(world.hamster);
+    } else {
       world.hamster = makeHamster();
       drawHamster(world.hamster);
     }
@@ -1304,12 +1699,25 @@
     if (!world.muted) unlockAudio();
   }
 
-  document.getElementById("playBtn").addEventListener("click", startGame);
+  document.getElementById("playBtn").addEventListener("click", startSolo);
   document.getElementById("retryBtn").addEventListener("click", startGame);
   document.getElementById("resumeBtn").addEventListener("click", resumeGame);
+  serverBtn.addEventListener("click", () => showScreen("server"));
+  serverBackBtn.addEventListener("click", () => showScreen("title"));
+  customJoinBtn.addEventListener("click", () => joinServer(customRoomInput.value));
+  customRoomInput.addEventListener("keydown", (event) => {
+    if (event.code === "Enter") {
+      event.preventDefault();
+      joinServer(customRoomInput.value);
+    }
+  });
   muteBtn.addEventListener("click", toggleMute);
+  window.addEventListener("pagehide", leaveServer);
 
   window.addEventListener("keydown", (event) => {
+    if (event.target && (event.target.tagName === "INPUT" || event.target.tagName === "TEXTAREA")) {
+      return;
+    }
     if (event.repeat) {
       if (event.code === "KeyA" || event.code === "KeyD" || event.code === "ArrowLeft" || event.code === "ArrowRight") {
         event.preventDefault();
