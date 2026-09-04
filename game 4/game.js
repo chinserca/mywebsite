@@ -13,13 +13,14 @@
   const rotateHint = document.getElementById("rotateHint");
   const toastEl = document.getElementById("toast");
   const newParkBtn = document.getElementById("newParkBtn");
+  const removeBtn = document.getElementById("removeBtn");
 
   const SAVE_KEY = "tunnelMazeSave";
   const MUTE_KEY = "tunnelMazeMuted";
   const STATE = { TITLE: "title", PLAY: "play", PAUSE: "pause" };
   const COLS = 12;
   const ROWS = 9;
-  const MAX_HAMSTERS = 12;
+  const MAX_HAMSTERS = 1000;
   const DIR = [
     { dx: 0, dy: -1, bit: 1, opp: 4 },
     { dx: 1, dy: 0, bit: 2, opp: 8 },
@@ -434,6 +435,7 @@
     seeds: 30,
     tab: "tunnels",
     placing: null,
+    removing: false,
     rot: 0,
     grid: [],
     hamsters: [],
@@ -583,6 +585,8 @@
     world.seeds = 30;
     world.grid = emptyGrid();
     world.placing = null;
+    world.removing = false;
+    removeBtn.classList.remove("is-active");
     world.rot = 0;
     world.tab = "tunnels";
     world.t = 0;
@@ -684,16 +688,22 @@
   }
 
   function updateHint() {
+    if (world.removing) {
+      hintText.textContent = "Click a block to remove it · Esc cancels";
+      shopNote.textContent = "Removed tiles give back half their seed cost.";
+      rotateHint.classList.add("is-hidden");
+      return;
+    }
     const def = world.placing ? pieceDef(world.placing) : null;
     if (def) {
       hintText.textContent = def.rotate
-        ? `Click a cell to place ${def.name} · R rotates · Esc cancels`
-        : `Click a cell to place ${def.name} · Esc cancels`;
+        ? `Click cells to place ${def.name} · R rotates · Esc cancels`
+        : `Click cells to place ${def.name} · Esc cancels`;
       shopNote.textContent = "Tiles must open toward each other to connect.";
       rotateHint.classList.toggle("is-hidden", !def.rotate);
       rotateHint.textContent = `Facing ${["N", "E", "S", "W"][world.rot]} · press R to rotate`;
     } else {
-      hintText.textContent = "Pick a tile and click the grid · R rotates · Esc pauses";
+      hintText.textContent = "Pick a tile and click the grid · Remove block deletes tiles · Esc pauses";
       shopNote.textContent = `${world.connected.size} path · ${feederCount()} feeder${feederCount() === 1 ? "" : "s"} · ${spawnerCount()} spawner${spawnerCount() === 1 ? "" : "s"} · ${world.hamsters.length}/${MAX_HAMSTERS} hamsters`;
       rotateHint.classList.add("is-hidden");
     }
@@ -703,10 +713,30 @@
     return Object.values(PIECES).filter((p) => p.tab === world.tab);
   }
 
+  function setRemoving(on) {
+    world.removing = on;
+    if (on) {
+      world.placing = null;
+      for (const btn of document.querySelectorAll(".shop-tab")) {
+        if (btn !== removeBtn) btn.classList.remove("is-active");
+      }
+    } else {
+      for (const btn of document.querySelectorAll(".shop-tab")) {
+        if (btn.dataset.tab) btn.classList.toggle("is-active", btn.dataset.tab === world.tab);
+      }
+    }
+    removeBtn.classList.toggle("is-active", on);
+    renderShop();
+    updateHint();
+  }
+
   function setTab(tab) {
     world.tab = tab;
     world.placing = null;
+    world.removing = false;
+    removeBtn.classList.remove("is-active");
     for (const btn of document.querySelectorAll(".shop-tab")) {
+      if (btn === removeBtn) continue;
       btn.classList.toggle("is-active", btn.dataset.tab === tab);
     }
     renderShop();
@@ -732,6 +762,8 @@
       if (def.spawner) meta = `${def.cost} · auto spawn`;
       btn.innerHTML = `<span class="emoji">${def.emoji}</span><span class="name">${def.name}</span><span class="price">${meta}</span>`;
       btn.addEventListener("click", () => {
+        world.removing = false;
+        removeBtn.classList.remove("is-active");
         if (world.placing === def.id) {
           world.placing = null;
         } else if (world.seeds >= def.cost) {
@@ -791,10 +823,54 @@
     }
   }
 
+  function rescueHamsters() {
+    const spots = [...world.connected].map((i) => ({ c: i % COLS, r: Math.floor(i / COLS) }));
+    const fallback = world.grid.findIndex((tile) => tile);
+    for (const h of world.hamsters) {
+      const onGone = !world.grid[idx(h.c, h.r)];
+      const movingGone = h.moving && !world.grid[idx(h.toC, h.toR)];
+      if (!onGone && !movingGone) continue;
+      stopHamster(h);
+      const dest = spots[0] || (fallback >= 0
+        ? { c: fallback % COLS, r: Math.floor(fallback / COLS) }
+        : null);
+      if (!dest) continue;
+      h.c = dest.c;
+      h.r = dest.r;
+      stopHamster(h);
+    }
+  }
+
+  function removeAt(c, r) {
+    if (!inBounds(c, r)) return;
+    const tile = world.grid[idx(c, r)];
+    if (!tile) {
+      showToast("Nothing to remove there.");
+      playTone(180, 120, 0.12, 0.08);
+      return;
+    }
+    const def = pieceDef(tile.id);
+    world.grid[idx(c, r)] = null;
+    const refund = def ? Math.floor(def.cost / 2) : 0;
+    world.seeds += refund;
+    recomputeConnected();
+    rescueHamsters();
+    syncStats();
+    renderShop();
+    showToast(refund ? `Removed ${def.name} · +${refund} seeds` : `Removed ${def.name}`);
+    playTone(320, 180, 0.12, 0.07);
+    saveGame();
+  }
+
   function placeAt(c, r) {
     if (!world.placing || !inBounds(c, r)) return;
     const def = pieceDef(world.placing);
-    if (!def || world.seeds < def.cost) return;
+    if (!def) return;
+    if (world.seeds < def.cost) {
+      showToast("Need more seeds to place another.");
+      playTone(180, 120, 0.12, 0.08);
+      return;
+    }
     if (world.grid[idx(c, r)]) {
       showToast("That cell is full.");
       playTone(180, 120, 0.12, 0.08);
@@ -802,16 +878,13 @@
     }
     world.grid[idx(c, r)] = makeTile(def.id, world.rot);
     world.seeds -= def.cost;
-    world.placing = null;
     recomputeConnected();
     maybeInvite();
-    let spawned = null;
     if (def.spawner && world.connected.has(idx(c, r))) {
-      spawned = spawnHamsterAt(c, r, `${def.name} opened — a hamster arrived!`);
+      spawnHamsterAt(c, r, `${def.name} opened — a hamster arrived!`);
     }
     syncStats();
     renderShop();
-    if (!spawned) showToast(`${def.name} added!`);
     playTone(440, 880, 0.16, 0.08);
     saveGame();
   }
@@ -1070,16 +1143,33 @@
       }
     }
 
-    if (world.hover && world.placing && world.state === STATE.PLAY) {
+    if (world.hover && world.state === STATE.PLAY) {
       const { c, r } = world.hover;
       const x = world.ox + c * s;
       const y = world.oy + r * s;
-      const ghost = makeTile(world.placing, world.rot);
-      drawTileContent(ghost, x, y, s, true);
-      ctx.strokeStyle = world.grid[idx(c, r)] ? "#e56b6f" : "#3f8fd8";
-      ctx.lineWidth = 3;
-      roundRect(x + 2, y + 2, s - 4, s - 4, 10);
-      ctx.stroke();
+      if (world.removing) {
+        ctx.strokeStyle = world.grid[idx(c, r)] ? "#d45b6a" : "rgba(212, 91, 106, 0.35)";
+        ctx.lineWidth = 3;
+        roundRect(x + 2, y + 2, s - 4, s - 4, 10);
+        ctx.stroke();
+        if (world.grid[idx(c, r)]) {
+          ctx.fillStyle = "rgba(212, 91, 106, 0.22)";
+          roundRect(x + 2, y + 2, s - 4, s - 4, 10);
+          ctx.fill();
+          ctx.fillStyle = "#d45b6a";
+          ctx.font = `700 ${Math.floor(s * 0.42)}px Segoe UI, sans-serif`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText("✕", x + s / 2, y + s / 2);
+        }
+      } else if (world.placing) {
+        const ghost = makeTile(world.placing, world.rot);
+        drawTileContent(ghost, x, y, s, true);
+        ctx.strokeStyle = world.grid[idx(c, r)] ? "#e56b6f" : "#3f8fd8";
+        ctx.lineWidth = 3;
+        roundRect(x + 2, y + 2, s - 4, s - 4, 10);
+        ctx.stroke();
+      }
     }
   }
 
@@ -1186,6 +1276,8 @@
     if (world.state !== STATE.PLAY) return;
     world.state = STATE.PAUSE;
     world.placing = null;
+    world.removing = false;
+    removeBtn.classList.remove("is-active");
     showScreen("pause");
     saveGame();
   }
@@ -1208,8 +1300,13 @@
   });
 
   for (const btn of document.querySelectorAll(".shop-tab")) {
+    if (!btn.dataset.tab) continue;
     btn.addEventListener("click", () => setTab(btn.dataset.tab));
   }
+  removeBtn.addEventListener("click", () => {
+    setRemoving(!world.removing);
+    if (world.removing) playTone(360, 220, 0.1, 0.05);
+  });
 
   canvas.addEventListener("pointermove", (event) => {
     world.hover = cellFromEvent(event);
@@ -1218,15 +1315,19 @@
     world.hover = null;
   });
   canvas.addEventListener("pointerdown", (event) => {
-    if (world.state !== STATE.PLAY || !world.placing) return;
+    if (world.state !== STATE.PLAY) return;
     const cell = cellFromEvent(event);
-    if (cell) placeAt(cell.c, cell.r);
+    if (!cell) return;
+    if (world.removing) {
+      removeAt(cell.c, cell.r);
+      return;
+    }
+    if (world.placing) placeAt(cell.c, cell.r);
   });
   canvas.addEventListener("contextmenu", (event) => {
     event.preventDefault();
     world.placing = null;
-    renderShop();
-    updateHint();
+    setRemoving(false);
   });
 
   window.addEventListener("keydown", (event) => {
@@ -1239,10 +1340,9 @@
       }
     }
     if (event.code === "Escape") {
-      if (world.placing) {
+      if (world.placing || world.removing) {
         world.placing = null;
-        renderShop();
-        updateHint();
+        setRemoving(false);
       } else if (world.state === STATE.PLAY) pauseGame();
       else if (world.state === STATE.PAUSE) resumeGame();
     }

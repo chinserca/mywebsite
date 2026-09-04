@@ -115,6 +115,74 @@ h1 {
   text-align: right;
 }
 
+.stat-chip.stage-name strong {
+  min-width: 0;
+  font-size: 0.95rem;
+}
+
+.health {
+  background: #fff;
+  border: 2px solid #f2d2a8;
+  border-radius: 999px;
+  padding: 6px 12px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.health-bar {
+  width: 110px;
+  height: 14px;
+  border-radius: 999px;
+  background: #f3e0c8;
+  overflow: hidden;
+  border: 1px solid #e8c9a0;
+}
+
+.health-fill {
+  height: 100%;
+  width: 100%;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #86ef64, #3d9c2c);
+  transition: width 0.18s ease, background 0.18s ease;
+}
+
+.health-fill.is-mid {
+  background: linear-gradient(180deg, #f5d06a, #d97706);
+}
+
+.health-fill.is-low {
+  background: linear-gradient(180deg, #fb7185, #e11d48);
+}
+
+.health strong {
+  color: var(--ink);
+  min-width: 2em;
+  text-align: right;
+}
+
+.toast {
+  position: absolute;
+  left: 50%;
+  top: 18%;
+  transform: translateX(-50%);
+  background: rgba(255, 250, 243, 0.95);
+  border: 3px solid #f0a04b;
+  color: var(--ink);
+  font-weight: 800;
+  padding: 12px 22px;
+  border-radius: 999px;
+  box-shadow: var(--shadow);
+  z-index: 5;
+  pointer-events: none;
+}
+
+.toast.is-hidden {
+  display: none;
+}
+
 .stage {
   position: relative;
   background: #7ec8e3;
@@ -172,6 +240,15 @@ canvas {
   border-radius: 16px;
   padding: 12px 28px;
   font-size: 1.15rem;
+}
+
+.btn.play.start {
+  min-width: 180px;
+  padding: 16px 40px;
+  font-size: 1.45rem;
+  letter-spacing: 0.04em;
+  border-radius: 20px;
+  box-shadow: 0 6px 0 #9a4d0c;
 }
 
 .btn.play:hover,

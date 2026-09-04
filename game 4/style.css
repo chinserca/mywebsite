@@ -269,6 +269,17 @@ kbd {
   box-shadow: 0 0 0 3px rgba(63, 143, 216, 0.18);
 }
 
+.shop-tab.remove-tab {
+  margin-left: auto;
+}
+
+.shop-tab.remove-tab.is-active {
+  border-color: #d45b6a;
+  background: #ffe4e8;
+  box-shadow: 0 0 0 3px rgba(212, 91, 106, 0.18);
+  color: #8e2f3d;
+}
+
 .shop-grid {
   display: grid;
   gap: 8px;

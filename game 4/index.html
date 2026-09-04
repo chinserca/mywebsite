@@ -39,9 +39,9 @@
           <h2>Tunnel Maze Habitat</h2>
           <p>Build a connected tunnel maze. Hamsters find food on their own.</p>
           <ul class="how">
-            <li>Buy tiles, then click the grid to place them</li>
+            <li>Buy a tile once, then click many cells to place more</li>
             <li>Press <kbd>R</kbd> to rotate a tunnel before placing</li>
-            <li>Place spawners to bring more hamsters into the maze</li>
+            <li>Use <strong>Remove block</strong> to click tiles off the maze</li>
           </ul>
           <div class="title-actions">
             <button type="button" class="btn play" id="playBtn">Play</button>
@@ -67,6 +67,7 @@
           <button type="button" class="shop-tab" data-tab="spawners">Spawners</button>
           <button type="button" class="shop-tab" data-tab="rooms">Rooms</button>
           <button type="button" class="shop-tab" data-tab="extras">Extras</button>
+          <button type="button" class="shop-tab remove-tab" id="removeBtn">Remove block</button>
         </div>
         <div class="shop-grid" id="shopGrid"></div>
         <p class="rotate-hint" id="rotateHint">Selected tunnel · press <kbd>R</kbd> to rotate</p>
