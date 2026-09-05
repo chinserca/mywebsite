@@ -6,6 +6,10 @@
   const stageEl = document.getElementById("stageValue");
   const stageNameEl = document.getElementById("stageName");
   const titleScreen = document.getElementById("titleScreen");
+  const lockScreen = document.getElementById("lockScreen");
+  const passwordInput = document.getElementById("passwordInput");
+  const passwordStatus = document.getElementById("passwordStatus");
+  const unlockBtn = document.getElementById("unlockBtn");
   const pauseScreen = document.getElementById("pauseScreen");
   const overScreen = document.getElementById("overScreen");
   const overText = document.getElementById("overText");
@@ -33,6 +37,8 @@
   const MUTE_KEY = "hamsterDashMuted";
   const NAME_KEY = "hamsterDashName";
   const STATE = { TITLE: "title", PLAY: "play", PAUSE: "pause", OVER: "over" };
+  const GAME_PASSWORD = "dash";
+  let unlocked = false;
   const BASE_GROUND = 430;
 
   const STAGES = [
@@ -131,6 +137,7 @@
     toastAt: 0,
     muted: localStorage.getItem(MUTE_KEY) === "1",
     audio: null,
+    theme: null,
     keys: { left: false, right: false, jump: false },
     rng: Math.random,
   };
@@ -196,7 +203,7 @@
     updateHealthHud();
     playTone(180, 80, 0.16, 0.1);
     if (h.hp <= 0) {
-      loseLife("The hamster ran out of health.");
+      return loseLife("The hamster ran out of health.");
     }
   }
 
@@ -250,6 +257,10 @@
 
   function rand(min, max) {
     return min + roll() * (max - min);
+  }
+
+  function flair(min, max) {
+    return min + Math.random() * (max - min);
   }
 
   function randInt(min, max) {
@@ -535,11 +546,32 @@
   }
 
   function showScreen(which) {
+    if (!unlocked && which !== "lock") which = "lock";
+    lockScreen.classList.toggle("is-hidden", which !== "lock");
     titleScreen.classList.toggle("is-hidden", which !== "title");
     serverScreen.classList.toggle("is-hidden", which !== "server");
     pauseScreen.classList.toggle("is-hidden", which !== "pause");
     overScreen.classList.toggle("is-hidden", which !== "over");
     if (which === "server") refreshServerList();
+    if (which === "lock") {
+      passwordInput.focus();
+    }
+  }
+
+  function tryUnlock() {
+    const typed = (passwordInput.value || "").trim().toLowerCase();
+    if (typed === GAME_PASSWORD) {
+      unlocked = true;
+      passwordStatus.textContent = "";
+      passwordInput.classList.remove("is-wrong");
+      passwordInput.value = "";
+      showScreen("title");
+      return;
+    }
+    passwordInput.classList.add("is-wrong");
+    passwordStatus.textContent = "Wrong password.";
+    passwordInput.focus();
+    passwordInput.select();
   }
 
   function updateOnlineHud() {
@@ -605,6 +637,7 @@
     net.name = name;
     localStorage.setItem(NAME_KEY, name);
     serverStatus.textContent = "Going in...";
+    if (net.online) await leaveServer();
     try {
       const res = await fetch("/nest/join", {
         method: "POST",
@@ -687,12 +720,20 @@
   }
 
   function startGame() {
+    if (!unlocked) {
+      showScreen("lock");
+      return;
+    }
     unlockAudio();
     playTone(520, 340, 0.12, 0.08);
     resetPlay();
   }
 
   function startSolo() {
+    if (!unlocked) {
+      showScreen("lock");
+      return;
+    }
     leaveServer();
     startGame();
   }
@@ -720,12 +761,28 @@
     return list.map((item) => Object.assign({}, item));
   }
 
+  function safeSpot(h) {
+    const x = h ? h.x : 180;
+    const y = h ? h.y : BASE_GROUND;
+    const standing = platformTopUnder(x - 18, 36, y, 90);
+    if (standing != null) return { x, y: standing };
+    let best = null;
+    for (const p of world.platforms) {
+      if (p.w < 50) continue;
+      const cx = p.x + Math.min(40, p.w * 0.35);
+      const dx = Math.abs(cx - x);
+      if (best === null || dx < best.dx) best = { dx, x: cx, y: p.y };
+    }
+    return best ? { x: best.x, y: best.y } : { x: 180, y: BASE_GROUND };
+  }
+
   function saveCheckpoint() {
     const h = world.hamster;
+    const spot = safeSpot(h);
     if (!world.flags.some((flag) => flag.stage === world.stage)) {
       world.flags.push({
-        x: h ? h.x - 48 : 130,
-        y: h ? h.y : BASE_GROUND,
+        x: spot.x - 48,
+        y: spot.y,
         stage: world.stage,
       });
     }
@@ -733,6 +790,7 @@
       stage: world.stage,
       score: world.score,
       scoreAcc: world.scoreAcc,
+      t: world.t,
       genX: world.genX,
       distance: world.distance,
       platforms: cloneList(world.platforms),
@@ -741,8 +799,8 @@
       pickups: cloneList(world.pickups),
       hills: cloneList(world.hills),
       flags: cloneList(world.flags),
-      hamsterX: h ? h.x : 180,
-      hamsterY: h ? h.y : BASE_GROUND,
+      hamsterX: spot.x,
+      hamsterY: spot.y,
     };
   }
 
@@ -756,6 +814,7 @@
     world.stage = point.stage;
     world.score = point.score;
     world.scoreAcc = point.scoreAcc;
+    world.t = point.t || 0;
     world.speed = stageDef().baseSpeed;
     world.grace = 110;
     world.genX = point.genX;
@@ -771,9 +830,7 @@
     world.hamster = makeHamster();
     world.hamster.x = point.hamsterX;
     world.hamster.y = point.hamsterY;
-    world.keys.left = false;
-    world.keys.right = false;
-    world.keys.jump = false;
+    fillMapAhead();
     scoreEl.textContent = String(world.score);
     updateHealthHud();
     updateStageHud();
@@ -783,7 +840,7 @@
   }
 
   function loseLife(message) {
-    if (world.state !== STATE.PLAY) return;
+    if (world.state !== STATE.PLAY) return false;
     if (world.score > world.best) {
       world.best = world.score;
       localStorage.setItem(BEST_KEY, String(world.best));
@@ -791,6 +848,7 @@
     }
     restoreCheckpoint();
     void message;
+    return true;
   }
 
   function gameOver(message) {
@@ -866,8 +924,8 @@
       world.dust.push({
         x: obs.x + obs.w / 2,
         y: obs.y - obs.h / 2,
-        vx: rand(-2.4, 2.4),
-        vy: rand(-3.2, -0.6),
+        vx: flair(-2.4, 2.4),
+        vy: flair(-3.2, -0.6),
         life: 16,
         color: obs.type === "sock" ? "#9ec9e8" : "#ffe08a",
       });
@@ -911,8 +969,8 @@
       world.dust.push({
         x: seed.x,
         y: seed.y,
-        vx: rand(-1.4, 1.4),
-        vy: rand(-2.2, -0.4),
+        vx: flair(-1.4, 1.4),
+        vy: flair(-2.2, -0.4),
         life: 18,
         color: seed.gold ? "#f4c430" : "#fff4d1",
       });
@@ -934,8 +992,8 @@
       world.dust.push({
         x: item.x,
         y: item.y,
-        vx: rand(-1.6, 1.6),
-        vy: rand(-2.6, -0.4),
+        vx: flair(-1.6, 1.6),
+        vy: flair(-2.6, -0.4),
         life: 18,
         color: item.kind === "heart" ? "#fb7185" : item.kind === "carrot" ? "#fb923c" : "#c084fc",
       });
@@ -980,7 +1038,9 @@
 
   function ensurePlaying() {
     unlockAudio();
+    if (!unlocked) return;
     if (!serverScreen.classList.contains("is-hidden")) return;
+    if (!lockScreen.classList.contains("is-hidden")) return;
     if (world.state === STATE.TITLE || world.state === STATE.OVER) startGame();
     else if (world.state === STATE.PAUSE) resumeGame();
   }
@@ -1063,8 +1123,8 @@
         world.dust.push({
           x: h.x - h.facing * 18,
           y: h.y - 4,
-          vx: -h.facing * rand(0.4, 1.4),
-          vy: rand(-0.8, -0.1),
+          vx: -h.facing * flair(0.4, 1.4),
+          vy: flair(-0.8, -0.1),
           life: 12,
           color: "rgba(255, 244, 220, 0.8)",
         });
@@ -1115,8 +1175,8 @@
     }
     for (const hill of world.hills) {
       if (hill.x < -320) {
-        hill.x = world.width + rand(20, 120);
-        hill.h = rand(70, 150);
+        hill.x = world.width + flair(20, 120);
+        hill.h = flair(70, 150);
       }
     }
     for (const obs of world.obstacles) {
@@ -1148,18 +1208,17 @@
       resolveEnemyGround(obs, dt);
       if (obs.attack > 4 && obs.attack < 12 && h.hurt <= 0) {
         if (hitBox(hamsterBox(), enemyAttackBox(obs))) {
-          hurtHamster(ENEMY_DAMAGE[obs.type] || 8, obs.x);
-          if (world.state !== STATE.PLAY) return;
+          if (hurtHamster(ENEMY_DAMAGE[obs.type] || 8, obs.x)) return;
         }
       }
     }
     for (const seed of world.seeds) seed.spin += 0.08 * dt;
     for (const item of world.pickups) item.bob += 0.1 * dt;
 
-    world.platforms = world.platforms.filter((p) => p.x + p.w > -80);
-    world.obstacles = world.obstacles.filter((obs) => obs.x + obs.w > -40 && obs.y < world.height + 80);
-    world.seeds = world.seeds.filter((seed) => seed.x > -30);
-    world.pickups = world.pickups.filter((item) => item.x > -30);
+    world.platforms = world.platforms.filter((p) => p.x + p.w > -2400);
+    world.obstacles = world.obstacles.filter((obs) => obs.x + obs.w > -2400 && obs.y < world.height + 80);
+    world.seeds = world.seeds.filter((seed) => seed.x > -2400);
+    world.pickups = world.pickups.filter((item) => item.x > -2400);
     fillMapAhead();
 
     for (const puff of world.dust) {
@@ -1183,8 +1242,7 @@
     if (world.grace <= 0 && h.hurt <= 0) {
       for (const obs of world.obstacles) {
         if (hitBox(box, obstacleBox(obs))) {
-          hurtHamster(Math.max(6, (ENEMY_DAMAGE[obs.type] || 8) - 2), obs.x);
-          if (world.state !== STATE.PLAY) return;
+          if (hurtHamster(Math.max(6, (ENEMY_DAMAGE[obs.type] || 8) - 2), obs.x)) return;
           break;
         }
       }
@@ -1761,10 +1819,28 @@
   }
 
   function unlockAudio() {
-    if (world.audio) return;
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtx) return;
-    world.audio = new AudioCtx();
+    if (!world.audio) {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtx) world.audio = new AudioCtx();
+    }
+    if (world.audio && world.audio.state === "suspended") {
+      world.audio.resume();
+    }
+    startTheme();
+  }
+
+  function startTheme() {
+    if (!world.theme) {
+      world.theme = new Audio("assets/theme.wav");
+      world.theme.loop = true;
+      world.theme.volume = 0.45;
+    }
+    if (world.muted) {
+      world.theme.pause();
+      return;
+    }
+    const play = world.theme.play();
+    if (play && typeof play.catch === "function") play.catch(() => {});
   }
 
   function playTone(startFreq, endFreq, duration, volume) {
@@ -1792,12 +1868,23 @@
     world.muted = !world.muted;
     localStorage.setItem(MUTE_KEY, world.muted ? "1" : "0");
     updateMuteLabel();
-    if (!world.muted) unlockAudio();
+    if (world.muted) {
+      if (world.theme) world.theme.pause();
+      return;
+    }
+    unlockAudio();
   }
 
   document.getElementById("playBtn").addEventListener("click", startSolo);
   document.getElementById("retryBtn").addEventListener("click", startGame);
   document.getElementById("resumeBtn").addEventListener("click", resumeGame);
+  unlockBtn.addEventListener("click", tryUnlock);
+  passwordInput.addEventListener("keydown", (event) => {
+    if (event.code === "Enter") {
+      event.preventDefault();
+      tryUnlock();
+    }
+  });
   serverBtn.addEventListener("click", () => showScreen("server"));
   serverBackBtn.addEventListener("click", () => showScreen("title"));
   customJoinBtn.addEventListener("click", () => joinServer(customRoomInput.value));
@@ -1856,12 +1943,21 @@
     }
   });
 
+  window.addEventListener("blur", () => {
+    world.keys.left = false;
+    world.keys.right = false;
+    world.keys.jump = false;
+  });
+
   canvas.addEventListener("pointerdown", () => {
     ensurePlaying();
     if (world.state === STATE.PLAY) attack();
   });
 
-  showScreen("title");
+  window.addEventListener("pointerdown", unlockAudio, { once: true });
+  window.addEventListener("keydown", unlockAudio, { once: true });
+
+  showScreen("lock");
   world.genX = -40;
   fillMapAhead();
   world.hamster = makeHamster();

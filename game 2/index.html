@@ -47,7 +47,18 @@
     <div class="stage">
       <canvas id="game" width="960" height="540" aria-label="Hamster Dash game"></canvas>
 
-      <div class="overlay" id="titleScreen">
+      <div class="overlay" id="lockScreen">
+        <img class="cover" src="assets/hamster-game.png" alt="Cute hamster" />
+        <h2>Hamster Dash</h2>
+        <p>Enter the password to play.</p>
+        <label class="field">Password
+          <input id="passwordInput" type="password" maxlength="24" placeholder="Password" autocomplete="off" />
+        </label>
+        <p class="server-status" id="passwordStatus"></p>
+        <button type="button" class="btn play start" id="unlockBtn">Unlock</button>
+      </div>
+
+      <div class="overlay is-hidden" id="titleScreen">
         <img class="cover" src="assets/hamster-game.png" alt="Cute hamster" />
         <h2>Hamster Dash</h2>
         <p>Every run builds a brand-new random map. Jump gaps, climb ledges, smash enemies!</p>
