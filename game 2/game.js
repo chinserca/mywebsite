@@ -124,6 +124,8 @@
     dust: [],
     hills: [],
     hits: [],
+    flags: [],
+    checkpoint: null,
     genX: 0,
     distance: 0,
     toastAt: 0,
@@ -194,7 +196,7 @@
     updateHealthHud();
     playTone(180, 80, 0.16, 0.1);
     if (h.hp <= 0) {
-      gameOver("The hamster ran out of health.");
+      loseLife("The hamster ran out of health.");
     }
   }
 
@@ -505,6 +507,8 @@
     world.pickups = [];
     world.dust = [];
     world.hits = [];
+    world.flags = [];
+    world.checkpoint = null;
     world.platforms = [];
     world.rng = net.online ? makeRng(net.seed) : Math.random;
     world.genX = -40;
@@ -524,6 +528,7 @@
     newBest.hidden = true;
     updateStageHud();
     showScreen(null);
+    saveCheckpoint();
     showToast(net.online ? `Joined ${net.roomName}` : "Stage 1: Sunny Yard");
     updateOnlineHud();
     updateHint();
@@ -701,13 +706,91 @@
       world.stage = next;
       const stage = stageDef();
       updateStageHud();
-      showToast(`Stage ${world.stage + 1}: ${stage.name}`);
+      saveCheckpoint();
+      showToast(`Stage ${world.stage + 1}: ${stage.name} — checkpoint!`);
       playTone(560, 920, 0.18, 0.08);
       if (world.stage > world.bestStage) {
         world.bestStage = world.stage;
         localStorage.setItem(STAGE_KEY, String(world.bestStage));
       }
     }
+  }
+
+  function cloneList(list) {
+    return list.map((item) => Object.assign({}, item));
+  }
+
+  function saveCheckpoint() {
+    const h = world.hamster;
+    if (!world.flags.some((flag) => flag.stage === world.stage)) {
+      world.flags.push({
+        x: h ? h.x - 48 : 130,
+        y: h ? h.y : BASE_GROUND,
+        stage: world.stage,
+      });
+    }
+    world.checkpoint = {
+      stage: world.stage,
+      score: world.score,
+      scoreAcc: world.scoreAcc,
+      genX: world.genX,
+      distance: world.distance,
+      platforms: cloneList(world.platforms),
+      obstacles: cloneList(world.obstacles),
+      seeds: cloneList(world.seeds),
+      pickups: cloneList(world.pickups),
+      hills: cloneList(world.hills),
+      flags: cloneList(world.flags),
+      hamsterX: h ? h.x : 180,
+      hamsterY: h ? h.y : BASE_GROUND,
+    };
+  }
+
+  function restoreCheckpoint() {
+    const point = world.checkpoint;
+    if (!point) {
+      gameOver("The hamster ran out of health.");
+      return;
+    }
+    world.state = STATE.PLAY;
+    world.stage = point.stage;
+    world.score = point.score;
+    world.scoreAcc = point.scoreAcc;
+    world.speed = stageDef().baseSpeed;
+    world.grace = 110;
+    world.genX = point.genX;
+    world.distance = point.distance;
+    world.platforms = cloneList(point.platforms);
+    world.obstacles = cloneList(point.obstacles);
+    world.seeds = cloneList(point.seeds);
+    world.pickups = cloneList(point.pickups);
+    world.hills = cloneList(point.hills);
+    world.flags = cloneList(point.flags);
+    world.dust = [];
+    world.hits = [];
+    world.hamster = makeHamster();
+    world.hamster.x = point.hamsterX;
+    world.hamster.y = point.hamsterY;
+    world.keys.left = false;
+    world.keys.right = false;
+    world.keys.jump = false;
+    scoreEl.textContent = String(world.score);
+    updateHealthHud();
+    updateStageHud();
+    showScreen(null);
+    showToast(`Back to ${stageDef().name}`);
+    playTone(420, 280, 0.12, 0.08);
+  }
+
+  function loseLife(message) {
+    if (world.state !== STATE.PLAY) return;
+    if (world.score > world.best) {
+      world.best = world.score;
+      localStorage.setItem(BEST_KEY, String(world.best));
+      bestEl.textContent = String(world.best);
+    }
+    restoreCheckpoint();
+    void message;
   }
 
   function gameOver(message) {
@@ -1016,7 +1099,7 @@
     if (h.hurt > 0) h.hurt -= dt;
 
     if (h.y > world.height + 60) {
-      gameOver("The hamster fell down a hole!");
+      loseLife("The hamster fell down a hole!");
       return;
     }
 
@@ -1027,6 +1110,7 @@
       for (const obs of world.obstacles) obs.x -= scroll;
       for (const seed of world.seeds) seed.x -= scroll;
       for (const item of world.pickups) item.x -= scroll;
+      for (const flag of world.flags) flag.x -= scroll;
       for (const hill of world.hills) hill.x -= scroll * 0.22;
     }
     for (const hill of world.hills) {
@@ -1198,10 +1282,26 @@
       ctx.fillRect(p.x, p.y, p.w, 10);
       ctx.fillStyle = "#c48a42";
       ctx.fillRect(p.x, p.y + 10, p.w, 4);
-      // Edge shading
-      ctx.fillStyle = "rgba(90, 50, 20, 0.18)";
-      ctx.fillRect(p.x, p.y + depth - 8, p.w, 8);
     }
+  }
+
+  function drawCheckpoint(flag) {
+    if (flag.x < -40 || flag.x > world.width + 40) return;
+    const x = flag.x;
+    const top = flag.y - 78;
+    ctx.fillStyle = "#8b5a2b";
+    ctx.fillRect(x - 2, top, 5, 78);
+    ctx.fillStyle = "#f0a04b";
+    ctx.beginPath();
+    ctx.moveTo(x + 3, top + 4);
+    ctx.lineTo(x + 36, top + 16);
+    ctx.lineTo(x + 3, top + 30);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "#fffef8";
+    ctx.font = "700 12px Segoe UI, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(String(flag.stage + 1), x + 16, top + 20);
   }
 
   function drawSeed(seed) {
@@ -1486,11 +1586,6 @@
     ctx.scale(h.facing * 1.18, 1.18 * h.squash);
     ctx.rotate(lean);
 
-    ctx.fillStyle = "rgba(90, 50, 20, 0.18)";
-    ctx.beginPath();
-    ctx.ellipse(0, 5, 36, 9, 0, 0, Math.PI * 2);
-    ctx.fill();
-
     ctx.fillStyle = "#d8904a";
     ctx.beginPath();
     ctx.ellipse(-14, -6 + Math.abs(run) * 5, 11, 7, 0.2, 0, Math.PI * 2);
@@ -1653,6 +1748,7 @@
       world.hamster = makeHamster();
       drawHamster(world.hamster);
     }
+    for (const flag of world.flags) drawCheckpoint(flag);
   }
 
   let last = performance.now();

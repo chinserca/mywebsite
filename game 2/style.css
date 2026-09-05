@@ -12,7 +12,6 @@
   --accent: #e89a3c;
   --accent-dark: #c46c1d;
   --seed: #f4c430;
-  --shadow: 0 12px 28px rgba(74, 52, 40, 0.16);
 }
 
 html,
@@ -43,7 +42,6 @@ body {
 .header {
   background: var(--card);
   border-radius: 22px;
-  box-shadow: var(--shadow);
   padding: 14px 18px;
 }
 
@@ -88,7 +86,6 @@ h1 {
 .leave-btn,
 .icon-btn {
   background: linear-gradient(180deg, #d97706, #b45309);
-  box-shadow: 0 3px 0 #7c3d0c;
   border-radius: 12px;
   padding: 8px 12px;
 }
@@ -183,7 +180,6 @@ h1 {
   font-weight: 800;
   padding: 12px 22px;
   border-radius: 999px;
-  box-shadow: var(--shadow);
   z-index: 5;
   pointer-events: none;
 }
@@ -197,7 +193,6 @@ h1 {
   background: #7ec8e3;
   border-radius: 24px;
   overflow: hidden;
-  box-shadow: var(--shadow);
   aspect-ratio: 16 / 9;
 }
 
@@ -227,7 +222,6 @@ canvas {
 .cover {
   width: min(180px, 42%);
   border-radius: 22px;
-  box-shadow: var(--shadow);
 }
 
 .how {
@@ -245,7 +239,6 @@ canvas {
 .btn.play {
   margin-top: 8px;
   background: linear-gradient(180deg, #f0a04b, #d97706);
-  box-shadow: 0 4px 0 #9a4d0c;
   border-radius: 16px;
   padding: 12px 28px;
   font-size: 1.15rem;
@@ -257,18 +250,15 @@ canvas {
   font-size: 1.45rem;
   letter-spacing: 0.04em;
   border-radius: 20px;
-  box-shadow: 0 6px 0 #9a4d0c;
 }
 
 .btn.play.start.server {
   background: linear-gradient(180deg, #7dd3fc, #0284c7);
-  box-shadow: 0 6px 0 #075985;
 }
 
 .btn.back {
   margin-top: 8px;
   background: linear-gradient(180deg, #d6b08a, #a87a4a);
-  box-shadow: 0 4px 0 #6b4a28;
   border-radius: 16px;
   padding: 10px 22px;
 }
