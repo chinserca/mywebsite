@@ -7,6 +7,19 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <div class="lock-screen" id="lockScreen">
+    <div class="lock-box">
+      <h2>games</h2>
+      <p>Enter the password to open the site.</p>
+      <label class="lock-field">
+        Password
+        <input id="passwordInput" type="password" maxlength="24" placeholder="Password" autocomplete="off" />
+      </label>
+      <p class="lock-status" id="passwordStatus"></p>
+      <button type="button" class="lock-btn" id="unlockBtn">Unlock</button>
+    </div>
+  </div>
+
   <header class="top-bar">
     <div class="lights lights-left" aria-hidden="true"></div>
     <div class="games-title">games</div>
@@ -51,6 +64,48 @@
     >
       <img src="game%204/assets/cover.svg" alt="Tunnel maze" />
     </a>
+    <a
+      class="game-icon"
+      href="https://scratch.mit.edu/projects/1378195931/"
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Open The Invasion"
+    >
+      <img src="assets/the-invasion.png" alt="The Invasion" />
+    </a>
   </main>
+  <script>
+    (function () {
+      const PASSWORD = "game";
+      const lockScreen = document.getElementById("lockScreen");
+      const passwordInput = document.getElementById("passwordInput");
+      const passwordStatus = document.getElementById("passwordStatus");
+      const unlockBtn = document.getElementById("unlockBtn");
+
+      function tryUnlock() {
+        const typed = (passwordInput.value || "").trim().toLowerCase();
+        if (typed === PASSWORD) {
+          lockScreen.classList.add("is-hidden");
+          passwordStatus.textContent = "";
+          passwordInput.classList.remove("is-wrong");
+          passwordInput.value = "";
+          return;
+        }
+        passwordInput.classList.add("is-wrong");
+        passwordStatus.textContent = "Wrong password.";
+        passwordInput.focus();
+        passwordInput.select();
+      }
+
+      unlockBtn.addEventListener("click", tryUnlock);
+      passwordInput.addEventListener("keydown", function (event) {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          tryUnlock();
+        }
+      });
+      passwordInput.focus();
+    })();
+  </script>
 </body>
 </html>

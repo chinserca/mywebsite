@@ -566,6 +566,7 @@
       passwordInput.classList.remove("is-wrong");
       passwordInput.value = "";
       showScreen("title");
+      unlockAudio();
       return;
     }
     passwordInput.classList.add("is-wrong");
@@ -1819,6 +1820,7 @@
   }
 
   function unlockAudio() {
+    if (!unlocked) return;
     if (!world.audio) {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
       if (AudioCtx) world.audio = new AudioCtx();
@@ -1953,9 +1955,6 @@
     ensurePlaying();
     if (world.state === STATE.PLAY) attack();
   });
-
-  window.addEventListener("pointerdown", unlockAudio, { once: true });
-  window.addEventListener("keydown", unlockAudio, { once: true });
 
   showScreen("lock");
   world.genX = -40;
