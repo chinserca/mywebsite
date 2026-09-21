@@ -36,10 +36,6 @@
             <span>Score</span>
             <strong id="scoreValue">0</strong>
           </div>
-          <div class="stat-chip" aria-label="Best score">
-            <span>Best</span>
-            <strong id="bestValue">0</strong>
-          </div>
         </div>
       </div>
     </header>
@@ -72,6 +68,7 @@
         <div class="mode-row">
           <button type="button" class="btn play start" id="playBtn">Play Solo</button>
           <button type="button" class="btn play start server" id="serverBtn">Join Server</button>
+          <button type="button" class="btn play start create" id="createBtn">Create Room</button>
         </div>
       </div>
 
@@ -83,12 +80,29 @@
         </label>
         <p class="server-status" id="serverStatus">Looking for nests...</p>
         <ul class="server-list" id="serverList"></ul>
-        <label class="field">Or make a nest
+        <label class="field">Join by nest name
           <input id="customRoom" maxlength="16" placeholder="secret-nest" autocomplete="off" />
         </label>
         <div class="mode-row">
           <button type="button" class="btn play" id="customJoinBtn">Go in</button>
+          <button type="button" class="btn play create" id="serverCreateBtn">Create Room</button>
           <button type="button" class="btn back" id="serverBackBtn">Back</button>
+        </div>
+      </div>
+
+      <div class="overlay is-hidden" id="createScreen">
+        <h2>Create a Room</h2>
+        <p>Name your nest, then go in. Friends can join it from Hamster Nests.</p>
+        <label class="field">Your name
+          <input id="createName" maxlength="14" placeholder="Hamster" autocomplete="nickname" />
+        </label>
+        <label class="field">Room name
+          <input id="createRoom" maxlength="20" placeholder="Pip Nest" autocomplete="off" />
+        </label>
+        <p class="server-status" id="createStatus">Pick a nest name, then create the room.</p>
+        <div class="mode-row">
+          <button type="button" class="btn play start create" id="createGoBtn">Create Room</button>
+          <button type="button" class="btn back" id="createBackBtn">Back</button>
         </div>
       </div>
 
@@ -103,7 +117,6 @@
         <p id="overText">The hamster ran out of health.</p>
         <p class="final-score">Score <strong id="finalScore">0</strong></p>
         <p class="final-score">Reached <strong id="finalStage">Sunny Yard</strong></p>
-        <p class="final-score best" id="newBest" hidden>New best!</p>
         <button type="button" class="btn play" id="retryBtn">Play again</button>
       </div>
 

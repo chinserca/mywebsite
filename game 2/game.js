@@ -2,7 +2,6 @@
   const canvas = document.getElementById("game");
   const ctx = canvas.getContext("2d");
   const scoreEl = document.getElementById("scoreValue");
-  const bestEl = document.getElementById("bestValue");
   const stageEl = document.getElementById("stageValue");
   const stageNameEl = document.getElementById("stageName");
   const titleScreen = document.getElementById("titleScreen");
@@ -15,7 +14,6 @@
   const overText = document.getElementById("overText");
   const finalScore = document.getElementById("finalScore");
   const finalStage = document.getElementById("finalStage");
-  const newBest = document.getElementById("newBest");
   const muteBtn = document.getElementById("muteBtn");
   const toastEl = document.getElementById("toast");
   const healthFill = document.getElementById("healthFill");
@@ -28,11 +26,18 @@
   const playerNameInput = document.getElementById("playerName");
   const customRoomInput = document.getElementById("customRoom");
   const customJoinBtn = document.getElementById("customJoinBtn");
+  const createScreen = document.getElementById("createScreen");
+  const createBtn = document.getElementById("createBtn");
+  const serverCreateBtn = document.getElementById("serverCreateBtn");
+  const createNameInput = document.getElementById("createName");
+  const createRoomInput = document.getElementById("createRoom");
+  const createStatus = document.getElementById("createStatus");
+  const createGoBtn = document.getElementById("createGoBtn");
+  const createBackBtn = document.getElementById("createBackBtn");
   const onlineChip = document.getElementById("onlineChip");
   const onlineCount = document.getElementById("onlineCount");
   const hintText = document.getElementById("hintText");
 
-  const BEST_KEY = "hamsterDashBest";
   const STAGE_KEY = "hamsterDashBestStage";
   const MUTE_KEY = "hamsterDashMuted";
   const NAME_KEY = "hamsterDashName";
@@ -117,7 +122,6 @@
     ground: BASE_GROUND,
     t: 0,
     score: 0,
-    best: Number(localStorage.getItem(BEST_KEY) || 0),
     bestStage: Number(localStorage.getItem(STAGE_KEY) || 0),
     stage: 0,
     speed: 4.2,
@@ -159,8 +163,8 @@
   };
 
   if (playerNameInput) playerNameInput.value = net.name;
+  if (createNameInput) createNameInput.value = net.name;
 
-  bestEl.textContent = String(world.best);
   updateStageHud();
   updateMuteLabel();
 
@@ -197,8 +201,9 @@
     h.hurt = 40;
     h.squash = 0.78;
     if (fromX != null) {
-      h.x += fromX < h.x ? 18 : -18;
-      h.x = Math.max(40, Math.min(world.width - 50, h.x));
+      const push = fromX < h.x ? 18 : -18;
+      const nextX = Math.max(40, Math.min(world.width - 50, h.x + push));
+      if (platformTopUnder(nextX - 16, 32, h.y, 24) != null) h.x = nextX;
     }
     updateHealthHud();
     playTone(180, 80, 0.16, 0.1);
@@ -234,6 +239,8 @@
       swing: 0,
       hp: MAX_HP,
       hurt: 0,
+      coyote: 0,
+      jumpBuf: 0,
     };
   }
 
@@ -328,10 +335,19 @@
     const left = x + inset;
     const right = x + w - inset;
     let best = null;
+    let bestDist = Infinity;
     for (const p of world.platforms) {
       if (right <= p.x + 2 || left >= p.x + p.w - 2) continue;
-      if (nearY != null && Math.abs(p.y - nearY) > slack) continue;
-      if (best === null || p.y < best) best = p.y;
+      if (nearY != null) {
+        const dist = Math.abs(p.y - nearY);
+        if (dist > slack) continue;
+        if (dist < bestDist || (dist === bestDist && (best === null || p.y < best))) {
+          best = p.y;
+          bestDist = dist;
+        }
+      } else if (best === null || p.y < best) {
+        best = p.y;
+      }
     }
     return best;
   }
@@ -379,7 +395,7 @@
     for (let i = 0; i < count; i += 1) {
       world.seeds.push({
         x: x + i * 28,
-        y: top - rand(28, 70),
+        y: top - rand(22, 40),
         r: 12,
         gold: chance(0.15),
         spin: rand(0, Math.PI),
@@ -402,7 +418,7 @@
       kind,
       heal,
       x,
-      y: top - rand(34, 72),
+      y: top - rand(22, 40),
       bob: rand(0, Math.PI * 2),
     });
   }
@@ -410,12 +426,13 @@
   function generateChunk() {
     const stage = stageDef();
     const startX = world.genX;
+    const worldX = world.distance + startX;
     const pick = roll();
     let width = 0;
 
-    // Safe flat ground early on
-    if (startX < world.width + 80) {
-      width = randInt(260, 360);
+    // Safe flat ground early on (world distance, not screen x)
+    if (worldX < world.width + 520) {
+      width = randInt(280, 380);
       addPlatform(startX, BASE_GROUND, width, 110);
       if (roll() < 0.5) addSeedsOn(BASE_GROUND, startX + 80, randInt(1, 3));
       if (roll() < 0.35) addHealthPickup(BASE_GROUND, startX + 140);
@@ -425,7 +442,7 @@
 
     if (pick < stage.gapChance) {
       // Gap then landing pad
-      const gap = randInt(70, 110 + world.stage * 8);
+      const gap = randInt(60, (world.stage === 0 ? 88 : 110) + world.stage * 8);
       const land = randInt(140, 220);
       addPlatform(startX + gap, BASE_GROUND, land, 110);
       if (roll() < 0.7) {
@@ -479,13 +496,17 @@
       addSeedsOn(BASE_GROUND, startX + 40, randInt(2, 4));
       if (roll() < 0.55) addHealthPickup(BASE_GROUND, startX + width * 0.8);
     } else {
-      // Mixed flat with small pits and a mid ledge
-      width = randInt(240, 340);
-      const left = randInt(90, 140);
-      const pit = randInt(50, 85);
-      const right = width - left - pit;
+      // Mixed flat with a pit and a mid ledge — keep both landings walkable
+      width = randInt(280, 380);
+      const left = randInt(120, 160);
+      const pit = randInt(50, 78);
+      let right = width - left - pit;
+      if (right < 140) {
+        right = 140;
+        width = left + pit + right;
+      }
       addPlatform(startX, BASE_GROUND, left, 110);
-      if (right > 60) addPlatform(startX + left + pit, BASE_GROUND, right, 110);
+      addPlatform(startX + left + pit, BASE_GROUND, right, 110);
       if (roll() < 0.7) {
         addPlatform(startX + left - 10, BASE_GROUND - randInt(55, 100), pit + 40, 22);
       }
@@ -536,7 +557,6 @@
     world.hamster = makeHamster();
     scoreEl.textContent = "0";
     updateHealthHud();
-    newBest.hidden = true;
     updateStageHud();
     showScreen(null);
     saveCheckpoint();
@@ -550,9 +570,17 @@
     lockScreen.classList.toggle("is-hidden", which !== "lock");
     titleScreen.classList.toggle("is-hidden", which !== "title");
     serverScreen.classList.toggle("is-hidden", which !== "server");
+    createScreen.classList.toggle("is-hidden", which !== "create");
     pauseScreen.classList.toggle("is-hidden", which !== "pause");
     overScreen.classList.toggle("is-hidden", which !== "over");
     if (which === "server") refreshServerList();
+    if (which === "create") {
+      if (createNameInput && !createNameInput.value && playerNameInput) {
+        createNameInput.value = playerNameInput.value;
+      }
+      createStatus.textContent = "Pick a nest name, then create the room.";
+      createRoomInput.focus();
+    }
     if (which === "lock") {
       passwordInput.focus();
     }
@@ -587,8 +615,36 @@
   }
 
   function playerName() {
-    const typed = (playerNameInput.value || "").trim();
+    const typed = (playerNameInput.value || createNameInput.value || "").trim();
     return typed.slice(0, 14) || "Hamster";
+  }
+
+  function rememberName(name) {
+    net.name = name;
+    localStorage.setItem(NAME_KEY, name);
+    if (playerNameInput) playerNameInput.value = name;
+    if (createNameInput) createNameInput.value = name;
+  }
+
+  function applyJoin(data, name) {
+    net.online = true;
+    net.id = data.id;
+    net.token = data.token;
+    net.room = data.room;
+    net.roomName = data.roomName;
+    net.seed = Number(data.seed) || 1;
+    net.tint = data.tint || "#e89a4a";
+    net.name = data.name || name;
+    net.others = [];
+    net.count = 1;
+    startGame();
+  }
+
+  let createFrom = "title";
+
+  function openCreate(from) {
+    createFrom = from || "title";
+    showScreen("create");
   }
 
   let lastRoomKey = "";
@@ -603,7 +659,7 @@
       if (!rooms.length) {
         lastRoomKey = "";
         serverList.innerHTML = "";
-        serverStatus.textContent = "No nests yet. Make one below.";
+        serverStatus.textContent = "No nests yet. Create a room.";
         return;
       }
       serverStatus.textContent = "Pick a nest and go in.";
@@ -618,7 +674,7 @@
         title.textContent = room.name;
         const count = document.createElement("span");
         const n = room.players || 0;
-        count.textContent = n === 1 ? "1 hamster inside" : `${n} hamsters inside`;
+        count.textContent = n === 0 ? "empty" : n === 1 ? "1 hamster inside" : `${n} hamsters inside`;
         meta.append(title, count);
         const go = document.createElement("button");
         go.type = "button";
@@ -635,8 +691,7 @@
 
   async function joinServer(roomId) {
     const name = playerName();
-    net.name = name;
-    localStorage.setItem(NAME_KEY, name);
+    rememberName(name);
     serverStatus.textContent = "Going in...";
     if (net.online) await leaveServer();
     try {
@@ -647,20 +702,34 @@
       });
       const data = await res.json();
       if (!data.ok) throw new Error("join failed");
-      net.online = true;
-      net.id = data.id;
-      net.token = data.token;
-      net.room = data.room;
-      net.roomName = data.roomName;
-      net.seed = Number(data.seed) || 1;
-      net.tint = data.tint || "#e89a4a";
-      net.name = data.name || name;
-      net.others = [];
-      net.count = 1;
-      startGame();
+      applyJoin(data, name);
     } catch {
       net.online = false;
       serverStatus.textContent = "Could not go in. Is the game server running?";
+    }
+  }
+
+  async function createRoom() {
+    const name = ((createNameInput.value || playerNameInput.value || "").trim().slice(0, 14)) || "Hamster";
+    const room = (createRoomInput.value || "").trim();
+    rememberName(name);
+    createStatus.textContent = "Making nest...";
+    if (net.online) await leaveServer();
+    try {
+      const res = await fetch("/nest/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ room, name }),
+      });
+      const data = await res.json();
+      if (!data.ok) {
+        createStatus.textContent = data.error || "Could not make that nest.";
+        return;
+      }
+      applyJoin(data, name);
+    } catch {
+      net.online = false;
+      createStatus.textContent = "Could not make a nest. Is the game server running?";
     }
   }
 
@@ -765,7 +834,7 @@
   function safeSpot(h) {
     const x = h ? h.x : 180;
     const y = h ? h.y : BASE_GROUND;
-    const standing = platformTopUnder(x - 18, 36, y, 90);
+    const standing = platformTopUnder(x - 18, 36, y, 22);
     if (standing != null) return { x, y: standing };
     let best = null;
     for (const p of world.platforms) {
@@ -782,7 +851,7 @@
     const spot = safeSpot(h);
     if (!world.flags.some((flag) => flag.stage === world.stage)) {
       world.flags.push({
-        x: spot.x - 48,
+        x: spot.x - 88,
         y: spot.y,
         stage: world.stage,
       });
@@ -805,12 +874,40 @@
     };
   }
 
+  function maybeAutosave() {
+    const h = world.hamster;
+    const point = world.checkpoint;
+    if (!h || !h.onGround || !point) return;
+    if (Math.abs(h.y - BASE_GROUND) > 3) return;
+    if (world.distance < point.distance + 380) return;
+    if (platformTopUnder(h.x + 26, 12, h.y, 18) == null) return;
+    if (platformTopUnder(h.x - 26, 12, h.y, 18) == null) return;
+    saveCheckpoint();
+  }
+
+  function shoveEnemiesFromHamster() {
+    const h = world.hamster;
+    if (!h) return;
+    for (const obs of world.obstacles) {
+      const cx = obs.x + obs.w / 2;
+      if (Math.abs(cx - h.x) > 88 || Math.abs(obs.y - h.y) > 70) continue;
+      const dir = cx >= h.x ? 1 : -1;
+      const nextX = h.x + dir * 110 - obs.w / 2;
+      if (obs.type === "bat" || platformTopUnder(nextX, obs.w, obs.y, 16) != null) {
+        obs.x = nextX;
+      }
+    }
+  }
+
   function restoreCheckpoint() {
     const point = world.checkpoint;
     if (!point) {
       gameOver("The hamster ran out of health.");
       return;
     }
+    world.keys.left = false;
+    world.keys.right = false;
+    world.keys.jump = false;
     world.state = STATE.PLAY;
     world.stage = point.stage;
     world.score = point.score;
@@ -831,6 +928,7 @@
     world.hamster = makeHamster();
     world.hamster.x = point.hamsterX;
     world.hamster.y = point.hamsterY;
+    shoveEnemiesFromHamster();
     fillMapAhead();
     scoreEl.textContent = String(world.score);
     updateHealthHud();
@@ -842,11 +940,6 @@
 
   function loseLife(message) {
     if (world.state !== STATE.PLAY) return false;
-    if (world.score > world.best) {
-      world.best = world.score;
-      localStorage.setItem(BEST_KEY, String(world.best));
-      bestEl.textContent = String(world.best);
-    }
     restoreCheckpoint();
     void message;
     return true;
@@ -860,12 +953,6 @@
     finalScore.textContent = String(world.score);
     finalStage.textContent = stageDef().name;
     overText.textContent = message || "The hamster ran out of health.";
-    if (world.score > world.best) {
-      world.best = world.score;
-      localStorage.setItem(BEST_KEY, String(world.best));
-      bestEl.textContent = String(world.best);
-      newBest.hidden = false;
-    }
     showScreen("over");
   }
 
@@ -883,9 +970,15 @@
 
   function jump() {
     const h = world.hamster;
-    if (!h || world.state !== STATE.PLAY || !h.onGround) return;
+    if (!h || world.state !== STATE.PLAY) return;
+    if (!h.onGround && h.coyote <= 0) {
+      h.jumpBuf = 8;
+      return;
+    }
     h.vy = -17.8;
     h.onGround = false;
+    h.coyote = 0;
+    h.jumpBuf = 0;
     h.squash = 1.18;
     playTone(420, 640, 0.1, 0.06);
   }
@@ -897,7 +990,11 @@
     obs.hitSwing = h.swing;
     obs.hp -= 1;
     obs.hurt = 14;
-    obs.x += h.facing * 22;
+    const push = (obs.x + obs.w / 2 >= h.x ? 1 : -1) * 22;
+    const nextX = obs.x + push;
+    if (obs.type === "bat" || platformTopUnder(nextX, obs.w, obs.y, 16) != null) {
+      obs.x = nextX;
+    }
     world.hits.push({
       x: obs.x + obs.w / 2,
       y: obs.y - obs.h / 2,
@@ -1008,27 +1105,27 @@
   function hamsterBox() {
     const h = world.hamster;
     return {
-      x: h.x - h.w * 0.22,
-      y: h.y - h.h * 0.72,
-      w: h.w * 0.48,
-      h: h.h * 0.52,
+      x: h.x - h.w * 0.24,
+      y: h.y - h.h * 0.78,
+      w: h.w * 0.5,
+      h: h.h * 0.7,
     };
   }
 
   function attackBox() {
     const h = world.hamster;
-    const reach = 58;
-    const tall = 48;
+    const reach = 86;
+    const tall = 56;
     return {
-      x: h.facing >= 0 ? h.x + 10 : h.x - reach - 10,
-      y: h.y - tall - 8,
+      x: h.facing >= 0 ? h.x - 2 : h.x - reach + 2,
+      y: h.y - tall - 2,
       w: reach,
       h: tall,
     };
   }
 
   function obstacleBox(obs) {
-    const pad = obs.type === "bug" || obs.type === "bat" ? 8 : 6;
+    const pad = 4;
     return {
       x: obs.x + pad,
       y: obs.y - obs.h + pad,
@@ -1041,6 +1138,7 @@
     unlockAudio();
     if (!unlocked) return;
     if (!serverScreen.classList.contains("is-hidden")) return;
+    if (!createScreen.classList.contains("is-hidden")) return;
     if (!lockScreen.classList.contains("is-hidden")) return;
     if (world.state === STATE.TITLE || world.state === STATE.OVER) startGame();
     else if (world.state === STATE.PAUSE) resumeGame();
@@ -1068,8 +1166,8 @@
     let nextY = h.y + h.vy * dt;
     h.onGround = false;
 
-    const footL = h.x - 16;
-    const footR = h.x + 16;
+    const footL = h.x - 22;
+    const footR = h.x + 22;
 
     if (h.vy >= 0) {
       let best = null;
@@ -1090,6 +1188,8 @@
     }
 
     h.y = nextY;
+    if (h.onGround) h.coyote = 10;
+    else if (h.coyote > 0) h.coyote -= dt;
   }
 
   function update(dt) {
@@ -1113,6 +1213,7 @@
 
     const h = world.hamster;
     const walkSpeed = 6.2;
+    const xBefore = h.x;
     let move = 0;
     if (world.keys.left) move -= 1;
     if (world.keys.right) move += 1;
@@ -1120,16 +1221,6 @@
       h.facing = move;
       h.x += move * walkSpeed * dt;
       h.run += 0.38 * dt;
-      if (h.onGround) {
-        world.dust.push({
-          x: h.x - h.facing * 18,
-          y: h.y - 4,
-          vx: -h.facing * flair(0.4, 1.4),
-          vy: flair(-0.8, -0.1),
-          life: 12,
-          color: "rgba(255, 244, 220, 0.8)",
-        });
-      }
     } else if (h.onGround) {
       h.run *= 0.85;
     }
@@ -1138,22 +1229,31 @@
     const cameraLeft = 140;
     const cameraRight = 380;
     let scroll = 0;
-    if (h.x > cameraRight) {
-      scroll = h.x - cameraRight;
-      h.x = cameraRight;
-    } else if (h.x < cameraLeft) {
-      scroll = h.x - cameraLeft;
-      h.x = cameraLeft;
-    }
-    if (world.distance + scroll < 0) {
-      const allowed = -world.distance;
-      h.x -= scroll - allowed;
-      scroll = allowed;
-    }
+    if (h.x > cameraRight) scroll = h.x - cameraRight;
+    else if (h.x < cameraLeft) scroll = h.x - cameraLeft;
+    if (world.distance + scroll < 0) scroll = -world.distance;
+    h.x -= scroll;
     world.distance += scroll;
     h.x = Math.max(40, Math.min(world.width - 50, h.x));
+    const walked = Math.abs(scroll) > 0.05 || Math.abs(h.x - xBefore) > 0.05;
+    if (walked && move !== 0 && h.onGround) {
+      world.dust.push({
+        x: h.x - h.facing * 18,
+        y: h.y - 4,
+        vx: -h.facing * flair(0.4, 1.4),
+        vy: flair(-0.8, -0.1),
+        life: 12,
+        color: "rgba(255, 244, 220, 0.8)",
+      });
+    }
 
     resolvePlatforms(h, dt);
+    if (h.jumpBuf > 0) h.jumpBuf -= dt;
+    if (h.onGround && h.jumpBuf > 0) {
+      h.jumpBuf = 0;
+      jump();
+    }
+    if (h.onGround) maybeAutosave();
     h.squash += (1 - h.squash) * 0.12 * dt;
     if (h.attack > 0) h.attack -= dt;
     if (h.attackCool > 0) h.attackCool -= dt;
@@ -1207,7 +1307,7 @@
         }
       }
       resolveEnemyGround(obs, dt);
-      if (obs.attack > 4 && obs.attack < 12 && h.hurt <= 0) {
+      if (obs.attack > 4 && obs.attack < 12 && h.hurt <= 0 && h.attack <= 0 && h.attackCool <= 0) {
         if (hitBox(hamsterBox(), enemyAttackBox(obs))) {
           if (hurtHamster(ENEMY_DAMAGE[obs.type] || 8, obs.x)) return;
         }
@@ -1216,10 +1316,11 @@
     for (const seed of world.seeds) seed.spin += 0.08 * dt;
     for (const item of world.pickups) item.bob += 0.1 * dt;
 
-    world.platforms = world.platforms.filter((p) => p.x + p.w > -2400);
-    world.obstacles = world.obstacles.filter((obs) => obs.x + obs.w > -2400 && obs.y < world.height + 80);
-    world.seeds = world.seeds.filter((seed) => seed.x > -2400);
-    world.pickups = world.pickups.filter((item) => item.x > -2400);
+    const keepX = -Math.max(2400, world.distance + 120);
+    world.platforms = world.platforms.filter((p) => p.x + p.w > keepX);
+    world.obstacles = world.obstacles.filter((obs) => obs.x + obs.w > keepX && obs.y < world.height + 80);
+    world.seeds = world.seeds.filter((seed) => seed.x > keepX);
+    world.pickups = world.pickups.filter((item) => item.x > keepX);
     fillMapAhead();
 
     for (const puff of world.dust) {
@@ -1240,7 +1341,7 @@
     }
 
     const box = hamsterBox();
-    if (world.grace <= 0 && h.hurt <= 0) {
+    if (world.grace <= 0 && h.hurt <= 0 && h.attack <= 0 && h.attackCool <= 0) {
       for (const obs of world.obstacles) {
         if (hitBox(box, obstacleBox(obs))) {
           if (hurtHamster(Math.max(6, (ENEMY_DAMAGE[obs.type] || 8) - 2), obs.x)) return;
@@ -1267,7 +1368,9 @@
       return true;
     });
 
-    world.scoreAcc += move !== 0 ? 0.18 * dt : 0;
+    // Travel score only when the course actually moves forward.
+    // Walking in place or backtracking must not farm stages.
+    world.scoreAcc += scroll > 0.05 ? 0.18 * dt : 0;
     if (world.scoreAcc >= 1) {
       const add = Math.floor(world.scoreAcc);
       world.score += add;
@@ -1321,13 +1424,17 @@
     ctx.fillStyle = "#8fbf7a";
     for (const hill of world.hills) {
       ctx.beginPath();
-      ctx.ellipse(hill.x, BASE_GROUND + 40, 180, hill.h, 0, Math.PI, 0);
+      ctx.ellipse(hill.x, BASE_GROUND + 8, 180, hill.h, 0, Math.PI, 0);
       ctx.fill();
     }
 
-    // Deep pit color under map
-    ctx.fillStyle = "#5a3a1e";
-    ctx.fillRect(0, BASE_GROUND + 40, world.width, world.height - BASE_GROUND);
+    // Dark pit so gaps read as holes, not walkable ground
+    const pit = ctx.createLinearGradient(0, BASE_GROUND, 0, world.height);
+    pit.addColorStop(0, "#2c1810");
+    pit.addColorStop(0.45, "#1d100a");
+    pit.addColorStop(1, "#140a06");
+    ctx.fillStyle = pit;
+    ctx.fillRect(0, BASE_GROUND, world.width, world.height - BASE_GROUND);
   }
 
   function drawPlatforms() {
@@ -1635,12 +1742,12 @@
   }
 
   function drawHamster(h) {
-    if (h.hurt > 0 && Math.floor(world.t / 3) % 2 === 0) return;
     const run = Math.sin(h.run);
     const bob = h.onGround ? Math.abs(run) * 2.2 : 0;
     const lean = h.onGround ? 0 : Math.min(0.18, -h.vy * 0.012);
     const punch = h.attack > 0 ? (12 - h.attack) / 12 : 0;
     ctx.save();
+    if (h.hurt > 0) ctx.globalAlpha = 0.55 + 0.4 * Math.min(1, h.hurt / 40);
     ctx.translate(h.x, h.y);
     ctx.scale(h.facing * 1.18, 1.18 * h.squash);
     ctx.rotate(lean);
@@ -1708,7 +1815,7 @@
     ctx.arc(16, -25 - bob, 7, 0.2, Math.PI - 0.2);
     ctx.stroke();
 
-    const pawX = 18 + punch * 28;
+    const pawX = 18 + punch * 40;
     const pawY = -18 - bob - punch * 4;
     ctx.fillStyle = "#e8a15a";
     ctx.beginPath();
@@ -1812,7 +1919,7 @@
 
   let last = performance.now();
   function loop(now) {
-    const dt = Math.min(3.2, (now - last) / 16.67);
+    const dt = Math.max(0, Math.min(3.2, (now - last) / 16.67));
     last = now;
     update(dt);
     draw();
@@ -1889,6 +1996,22 @@
   });
   serverBtn.addEventListener("click", () => showScreen("server"));
   serverBackBtn.addEventListener("click", () => showScreen("title"));
+  createBtn.addEventListener("click", () => openCreate("title"));
+  serverCreateBtn.addEventListener("click", () => openCreate("server"));
+  createBackBtn.addEventListener("click", () => showScreen(createFrom));
+  createGoBtn.addEventListener("click", createRoom);
+  createRoomInput.addEventListener("keydown", (event) => {
+    if (event.code === "Enter") {
+      event.preventDefault();
+      createRoom();
+    }
+  });
+  createNameInput.addEventListener("keydown", (event) => {
+    if (event.code === "Enter") {
+      event.preventDefault();
+      createRoomInput.focus();
+    }
+  });
   customJoinBtn.addEventListener("click", () => joinServer(customRoomInput.value));
   customRoomInput.addEventListener("keydown", (event) => {
     if (event.code === "Enter") {
@@ -1901,7 +2024,8 @@
 
   window.addEventListener("keydown", (event) => {
     if (event.target && (event.target.tagName === "INPUT" || event.target.tagName === "TEXTAREA")) {
-      return;
+      if (event.code !== "Escape") return;
+      event.target.blur();
     }
     if (event.repeat) {
       if (event.code === "KeyA" || event.code === "KeyD" || event.code === "ArrowLeft" || event.code === "ArrowRight") {
@@ -1932,6 +2056,14 @@
       if (world.state === STATE.PLAY) attack();
     }
     if (event.code === "Escape") {
+      if (!createScreen.classList.contains("is-hidden")) {
+        showScreen(createFrom);
+        return;
+      }
+      if (!serverScreen.classList.contains("is-hidden")) {
+        showScreen("title");
+        return;
+      }
       if (world.state === STATE.PLAY) pauseGame();
       else if (world.state === STATE.PAUSE) resumeGame();
     }
@@ -1952,8 +2084,9 @@
   });
 
   canvas.addEventListener("pointerdown", () => {
+    const wasPaused = world.state === STATE.PAUSE;
     ensurePlaying();
-    if (world.state === STATE.PLAY) attack();
+    if (world.state === STATE.PLAY && !wasPaused) attack();
   });
 
   showScreen("lock");

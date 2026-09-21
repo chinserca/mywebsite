@@ -36,9 +36,14 @@ $staleMs = 4000
 
 function Sanitize-NestId([string]$value) {
   if ([string]::IsNullOrWhiteSpace($value)) { return "nest" }
-  $clean = ([string]$value).ToLowerInvariant() -replace "[^a-z0-9\-]", ""
+  $clean = ([string]$value).ToLowerInvariant() -replace "\s+", "-" -replace "[^a-z0-9\-]", ""
+  $clean = $clean -replace "-+", "-" -replace "^-|-$", ""
   if ([string]::IsNullOrWhiteSpace($clean)) { return "nest" }
   if ($clean.Length -gt 16) { $clean = $clean.Substring(0, 16) }
+  foreach ($preset in $presetNames.GetEnumerator()) {
+    $alias = ([string]$preset.Value).ToLowerInvariant() -replace "\s+", "-" -replace "[^a-z0-9\-]", ""
+    if ($clean -eq $alias) { return [string]$preset.Key }
+  }
   return $clean
 }
 
@@ -46,6 +51,14 @@ function Sanitize-NestName([string]$value) {
   if ([string]::IsNullOrWhiteSpace($value)) { return "Hamster" }
   $clean = ([string]$value).Trim()
   if ($clean.Length -gt 14) { $clean = $clean.Substring(0, 14) }
+  return $clean
+}
+
+function Sanitize-RoomLabel([string]$value) {
+  if ([string]::IsNullOrWhiteSpace($value)) { return "" }
+  $clean = ([string]$value).Trim() -replace "[^A-Za-z0-9 \-]", ""
+  $clean = ($clean -replace "\s+", " ").Trim()
+  if ($clean.Length -gt 20) { $clean = $clean.Substring(0, 20).Trim() }
   return $clean
 }
 
@@ -58,9 +71,53 @@ function Get-NestRoom([string]$id) {
       name = $label
       seed = Get-Random -Minimum 1 -Maximum 999999999
       players = @{}
+      created = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
     }
   }
   return $rooms[$key]
+}
+
+function Should-ListCustom($room) {
+  if ($room.players.Count -gt 0) { return $true }
+  if ($null -eq $room.created) { return $false }
+  $now = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+  return ($now - [int64]$room.created) -lt 180000
+}
+
+function Add-NestPlayer($room, $nameValue) {
+  Prune-NestRoom $room
+  $id = "h" + [guid]::NewGuid().ToString("N").Substring(0, 8)
+  $token = [guid]::NewGuid().ToString("N")
+  $name = Sanitize-NestName $nameValue
+  $tint = $tints[$room.players.Count % $tints.Count]
+  $now = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+  $room.players[$id] = @{
+    id = $id
+    token = $token
+    name = $name
+    tint = $tint
+    worldX = 180
+    y = 430
+    facing = 1
+    hp = 100
+    run = 0
+    squash = 1
+    attack = 0
+    hurt = 0
+    score = 0
+    alive = $true
+    seen = $now
+  }
+  return [ordered]@{
+    ok = $true
+    id = $id
+    token = $token
+    room = $room.id
+    roomName = $room.name
+    seed = $room.seed
+    tint = $tint
+    name = $name
+  }
 }
 
 function Prune-NestRoom($room) {
@@ -152,7 +209,7 @@ function Handle-Nest($ctx, [string]$path) {
     }
     foreach ($room in @($rooms.Values)) {
       if ($presetNames.ContainsKey($room.id)) { continue }
-      if ($room.players.Count -le 0) { continue }
+      if (-not (Should-ListCustom $room)) { continue }
       $list += [ordered]@{
         id = $room.id
         name = $room.name
@@ -167,39 +224,44 @@ function Handle-Nest($ctx, [string]$path) {
   if ($method -eq "POST" -and $path -eq "/nest/join") {
     $body = Read-NestBody $ctx
     $room = Get-NestRoom (Get-Prop $body "room" "nest")
-    Prune-NestRoom $room
-    $id = "h" + [guid]::NewGuid().ToString("N").Substring(0, 8)
-    $token = [guid]::NewGuid().ToString("N")
-    $name = Sanitize-NestName (Get-Prop $body "name" "Hamster")
-    $tint = $tints[$room.players.Count % $tints.Count]
-    $now = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
-    $room.players[$id] = @{
-      id = $id
-      token = $token
-      name = $name
-      tint = $tint
-      worldX = 180
-      y = 430
-      facing = 1
-      hp = 100
-      run = 0
-      squash = 1
-      attack = 0
-      hurt = 0
-      score = 0
-      alive = $true
-      seen = $now
+    Write-NestJson $ctx 200 (Add-NestPlayer $room (Get-Prop $body "name" "Hamster"))
+    return
+  }
+
+  if ($method -eq "POST" -and $path -eq "/nest/create") {
+    $body = Read-NestBody $ctx
+    $label = Sanitize-RoomLabel (Get-Prop $body "room" "")
+    $key = if ($label) { Sanitize-NestId $label } else { "" }
+    if ([string]::IsNullOrWhiteSpace($key)) {
+      $key = "n" + [guid]::NewGuid().ToString("N").Substring(0, 6)
+      $label = "Nest $key"
     }
-    Write-NestJson $ctx 200 ([ordered]@{
-      ok = $true
-      id = $id
-      token = $token
-      room = $room.id
-      roomName = $room.name
-      seed = $room.seed
-      tint = $tint
-      name = $name
-    })
+    if ($presetNames.ContainsKey($key)) {
+      Write-NestJson $ctx 409 ([ordered]@{
+        ok = $false
+        error = "That name is already a public nest. Pick a new one."
+      })
+      return
+    }
+    if ($rooms.ContainsKey($key)) {
+      Prune-NestRoom $rooms[$key]
+      if ($rooms[$key].players.Count -gt 0) {
+        Write-NestJson $ctx 409 ([ordered]@{
+          ok = $false
+          error = "That nest is already open. Join it or pick a new name."
+        })
+        return
+      }
+    }
+    $now = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+    $rooms[$key] = @{
+      id = $key
+      name = $label
+      seed = Get-Random -Minimum 1 -Maximum 999999999
+      players = @{}
+      created = $now
+    }
+    Write-NestJson $ctx 200 (Add-NestPlayer $rooms[$key] (Get-Prop $body "name" "Hamster"))
     return
   }
 
