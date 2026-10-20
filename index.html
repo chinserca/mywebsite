@@ -61,13 +61,26 @@
       <img src="assets/the-invasion.png" alt="The Invasion" />
     </a>
   </main>
-  <audio id="backgroundMusic" src="assets/back-one-day.mp3" loop autoplay preload="metadata"></audio>
+  <audio id="backgroundMusic" src="assets/back-one-day.mp3" autoplay preload="metadata"></audio>
   <button type="button" class="music-toggle" id="musicToggle" aria-pressed="false">Play music</button>
   <script>
     (function () {
       const backgroundMusic = document.getElementById("backgroundMusic");
       const musicToggle = document.getElementById("musicToggle");
+      const playlist = [
+        "assets/back-one-day.mp3",
+        "assets/pal.mp3",
+        "assets/genshin-impact-main-theme.mp3",
+        "assets/cycles.mp3",
+        "assets/back-on-track.mp3"
+      ];
+      let currentTrack = 0;
       backgroundMusic.volume = 0.35;
+      backgroundMusic.addEventListener("ended", function () {
+        currentTrack = (currentTrack + 1) % playlist.length;
+        backgroundMusic.src = playlist[currentTrack];
+        playMusic();
+      });
 
       function updateMusicButton() {
         const playing = !backgroundMusic.paused;
