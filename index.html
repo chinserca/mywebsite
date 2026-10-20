@@ -7,19 +7,6 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div class="lock-screen" id="lockScreen">
-    <div class="lock-box">
-      <h2>games</h2>
-      <p>Enter the password to open the site.</p>
-      <label class="lock-field">
-        Password
-        <input id="passwordInput" type="password" maxlength="24" placeholder="Password" autocomplete="off" />
-      </label>
-      <p class="lock-status" id="passwordStatus"></p>
-      <button type="button" class="lock-btn" id="unlockBtn">Unlock</button>
-    </div>
-  </div>
-
   <header class="top-bar">
     <div class="lights lights-left" aria-hidden="true"></div>
     <div class="games-title">games</div>
@@ -74,39 +61,43 @@
       <img src="assets/the-invasion.png" alt="The Invasion" />
     </a>
   </main>
-  <audio id="backgroundMusic" src="assets/back-one-day.mp3" loop preload="none"></audio>
-  <button type="button" class="music-toggle" id="musicToggle" aria-pressed="false" hidden>Music: Off</button>
+  <audio id="backgroundMusic" src="assets/back-one-day.mp3" loop autoplay preload="metadata"></audio>
+  <button type="button" class="music-toggle" id="musicToggle" aria-pressed="false">Play music</button>
   <script>
     (function () {
-      const PASSWORD = "game";
-      const lockScreen = document.getElementById("lockScreen");
-      const passwordInput = document.getElementById("passwordInput");
-      const passwordStatus = document.getElementById("passwordStatus");
-      const unlockBtn = document.getElementById("unlockBtn");
-
       const backgroundMusic = document.getElementById("backgroundMusic");
       const musicToggle = document.getElementById("musicToggle");
       backgroundMusic.volume = 0.35;
 
       function updateMusicButton() {
         const playing = !backgroundMusic.paused;
-        musicToggle.textContent = playing ? "Music: On" : "Music: Off";
+        musicToggle.textContent = playing ? "Music: On" : "Play music";
         musicToggle.setAttribute("aria-pressed", String(playing));
       }
 
       function playMusic() {
-        backgroundMusic.play().catch(function () {
-          updateMusicButton();
+        musicToggle.textContent = "Loading music…";
+        backgroundMusic.play().catch(function (error) {
+          if (error.name === "NotAllowedError") {
+            musicToggle.textContent = "Play music";
+          } else {
+            musicToggle.textContent = "Retry music";
+          }
+          musicToggle.setAttribute("aria-pressed", "false");
         });
       }
 
-      backgroundMusic.addEventListener("play", updateMusicButton);
+      backgroundMusic.addEventListener("playing", function () {
+        removeMusicStartListeners();
+        updateMusicButton();
+      });
       backgroundMusic.addEventListener("pause", updateMusicButton);
       backgroundMusic.addEventListener("error", function () {
         musicToggle.textContent = "Music unavailable";
         musicToggle.setAttribute("aria-pressed", "false");
       });
       musicToggle.addEventListener("click", function () {
+        removeMusicStartListeners();
         if (backgroundMusic.paused) {
           playMusic();
         } else {
@@ -114,31 +105,26 @@
         }
       });
 
-      function tryUnlock() {
-        const typed = (passwordInput.value || "").trim().toLowerCase();
-        if (typed === PASSWORD) {
-          lockScreen.classList.add("is-hidden");
-          passwordStatus.textContent = "";
-          passwordInput.classList.remove("is-wrong");
-          passwordInput.value = "";
-          musicToggle.hidden = false;
-          playMusic();
-          return;
-        }
-        passwordInput.classList.add("is-wrong");
-        passwordStatus.textContent = "Wrong password.";
-        passwordInput.focus();
-        passwordInput.select();
+      function removeMusicStartListeners() {
+        document.removeEventListener("click", startMusic);
+        document.removeEventListener("keydown", startMusic);
       }
 
-      unlockBtn.addEventListener("click", tryUnlock);
-      passwordInput.addEventListener("keydown", function (event) {
-        if (event.key === "Enter") {
-          event.preventDefault();
-          tryUnlock();
+      function startMusic(event) {
+        if (event.type === "keydown" &&
+            (event.key === "Tab" || event.key === "Shift" ||
+             event.key === "Control" || event.key === "Alt" || event.key === "Meta")) {
+          return;
         }
-      });
-      passwordInput.focus();
+        if (event.target.closest && event.target.closest("#musicToggle")) {
+          return;
+        }
+        playMusic();
+      }
+
+      document.addEventListener("click", startMusic);
+      document.addEventListener("keydown", startMusic);
+      playMusic();
     })();
   </script>
 </body>
