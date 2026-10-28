@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600">
+<rect width="600" height="600" rx="32" fill="#dff2ff"/>
+<rect x="80" y="100" width="440" height="330" rx="24" fill="white" stroke="#2a5f88" stroke-width="12"/>
+<path d="M86 170h428" stroke="#2a5f88" stroke-width="12"/>
+<g fill="#f0a04b"><circle cx="120" cy="136" r="10"/><circle cx="154" cy="136" r="10"/><circle cx="188" cy="136" r="10"/></g>
+<circle cx="300" cy="290" r="90" fill="#9edcf3" stroke="#2a5f88" stroke-width="8"/>
+<ellipse cx="300" cy="290" rx="38" ry="90" fill="none" stroke="#2a5f88" stroke-width="7"/>
+<path d="M210 290h180M224 248h152M224 332h152" stroke="#2a5f88" stroke-width="7"/>
+<text x="300" y="492" text-anchor="middle" font-family="Arial,sans-serif" font-weight="700" font-size="40" fill="#2a5f88">HawkTech3D</text>
+</svg>
