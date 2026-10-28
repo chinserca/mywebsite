@@ -136,8 +136,3 @@ body {
   outline: 3px solid #fffef8;
   outline-offset: 3px;
 }
-
-.credits-bar { display: flex; justify-content: center; padding: 16px 20px 0; }
-.credits-button { display: inline-block; padding: 10px 24px; border: 2px solid #ffe566; border-radius: 999px; background: #2a5f88; color: #fffef8; font-weight: 700; text-decoration: none; box-shadow: 0 4px 14px rgba(20, 60, 100, .25); }
-.credits-button:hover { background: #204c70; }
-.credits-button:focus-visible { outline: 3px solid white; outline-offset: 3px; }
