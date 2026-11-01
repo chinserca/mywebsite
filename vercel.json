@@ -1,24 +1,27 @@
 {
-  "rewrites": [
+  "routes": [
     {
-      "source": "/",
+      "src": "^/$",
       "has": [
         {
           "type": "host",
           "value": "hawktech3d.vercel.app"
         }
       ],
-      "destination": "/website%201/index.html"
+      "dest": "/website 1/index.html"
     },
     {
-      "source": "/:file",
+      "src": "^/([^/]+)$",
       "has": [
         {
           "type": "host",
           "value": "hawktech3d.vercel.app"
         }
       ],
-      "destination": "/website%201/:file"
+      "dest": "/website 1/$1"
+    },
+    {
+      "handle": "filesystem"
     }
   ]
 }
