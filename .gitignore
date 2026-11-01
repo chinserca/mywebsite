@@ -16,3 +16,5 @@ Screenshot*.png
 *.pem
 *.key
 .vercel
+.env*
+node_modules/

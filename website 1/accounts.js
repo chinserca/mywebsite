@@ -1,121 +1,130 @@
 (function () {
-  "use strict";
-  const login = document.getElementById("loginButton");
-  const signup = document.getElementById("signupButton");
-  const logout = document.getElementById("logoutButton");
-  const name = document.getElementById("accountName");
-  const status = document.getElementById("accountStatus");
-  const dialog = document.getElementById("accountDialog");
-  const form = document.getElementById("accountForm");
-  const title = document.getElementById("accountTitle");
-  const usernameField = document.getElementById("usernameField");
-  const username = document.getElementById("accountUsername");
-  const email = document.getElementById("accountEmail");
-  const password = document.getElementById("accountPassword");
-  const message = document.getElementById("accountMessage");
-  const submit = document.getElementById("submitAccount");
-  const switcher = document.getElementById("switchAccount");
-  const reset = document.getElementById("resetPassword");
-  const returnUrl = "https://mywebsite-one-beta-41.vercel.app/website%201/index.html";
-  let mode = "login", busy = false, opener;
-  if (!window.supabase) {
-    status.textContent = "Accounts could not load. Please refresh and try again.";
-    return;
-  }
-  const client = window.supabase.createClient(
-    "https://hvlsmytdbxoczikpipli.supabase.co",
-    "sb_publishable_pFWihcQNl1GvVCq2P32LIw_5NYHylQH",
-    { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } }
-  );
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const dialog = $('accountDialog');
+  if (!dialog) return;
+  const form = $('accountForm'), message = $('accountMessage');
+  let mode = 'login', busy = false, opener, currentUser = null;
+  const ready = new Promise(resolve => {
+    if (!window.supabase) { $('accountStatus').textContent = 'Accounts couldn’t load. Refresh the page and try again.'; resolve(null); return; }
+    const client = window.supabase.createClient('https://hvlsmytdbxoczikpipli.supabase.co', 'sb_publishable_pFWihcQNl1GvVCq2P32LIw_5NYHylQH');
+    window.HawkClient = client;
+    const render = user => {
+      currentUser = user;
+      $('loginButton').hidden = $('signupButton').hidden = !!user;
+      $('logoutButton').hidden = $('accountName').hidden = !user;
+      $('accountName').textContent = user ? 'Hi, ' + (user.user_metadata?.name?.split(' ')[0] || 'there') : '';
+      window.dispatchEvent(new CustomEvent('hawk:auth', { detail: user }));
+    };
+    client.auth.onAuthStateChange((event, session) => {
+      render(session?.user || null);
+      if (event === 'PASSWORD_RECOVERY') setTimeout(() => open('recovery', $('loginButton')), 0);
+    });
+    client.auth.getSession().then(({ data, error }) => {
+      if (error) throw error;
+      render(data.session?.user || null);
+      $('loginButton').disabled = $('signupButton').disabled = false;
+      $('accountStatus').textContent = '';
+      resolve(client);
+    }).catch(() => { $('accountStatus').textContent = 'Accounts couldn’t load. Refresh and try again.'; resolve(null); });
+  });
   function setMode(next) {
     mode = next;
-    const signingUp = mode === "signup";
-    const recovering = mode === "recovery";
-    title.textContent = signingUp ? "Create your account" : recovering ? "Set a new password" : "Welcome back";
-    submit.textContent = signingUp ? "Sign up" : recovering ? "Save new password" : "Log in";
-    usernameField.hidden = !signingUp;
-    username.required = signingUp;
-    username.disabled = !signingUp;
-    email.closest("label").hidden = recovering;
-    email.required = !recovering;
-    password.autocomplete = signingUp || recovering ? "new-password" : "current-password";
-    password.minLength = signingUp || recovering ? 12 : 1;
-    switcher.hidden = recovering;
-    reset.hidden = signingUp || recovering;
-    switcher.textContent = signingUp ? "Already have an account? Log in" : "Create an account";
-    message.textContent = "";
-    password.value = "";
+    const profile = mode === 'signup' || mode === 'profile' || mode === 'login', recovery = mode === 'recovery';
+    $('accountTitle').textContent = ({ signup: 'Join HawkTech3D', login: 'Welcome back', profile: 'Your order details', recovery: 'Choose a new password' })[mode];
+    $('submitAccount').textContent = ({ signup: 'Create account', login: 'Log in', profile: 'Save details', recovery: 'Save password' })[mode];
+    for (const id of ['accountStudentName', 'accountGrade', 'accountClass']) {
+      $(id).closest('label').hidden = !profile; $(id).required = profile; $(id).disabled = !profile;
+    }
+    $('accountEmail').closest('label').hidden = recovery || mode === 'profile';
+    $('accountEmail').disabled = recovery || mode === 'profile';
+    $('accountPassword').closest('label').hidden = mode === 'profile';
+    $('accountPassword').disabled = mode === 'profile';
+    $('accountPassword').minLength = mode === 'signup' || recovery ? 12 : 1;
+    $('accountPassword').autocomplete = mode === 'signup' || recovery ? 'new-password' : 'current-password';
+    $('accountPassword').value = '';
+    $('switchAccount').hidden = recovery || mode === 'profile';
+    $('switchAccount').textContent = mode === 'signup' ? 'Already joined? Log in' : 'Create an account';
+    $('resetPassword').hidden = mode !== 'login';
+    $('accountPrivacy').hidden = !profile;
+    message.textContent = '';
+    if (profile && currentUser) {
+      $('accountStudentName').value = currentUser.user_metadata?.name || '';
+      $('accountGrade').value = currentUser.user_metadata?.grade || '';
+      $('accountClass').value = currentUser.user_metadata?.class_name || '';
+    }
   }
-  function open(next, source) {
-    opener = source;
-    setMode(next);
-    if (!dialog.open) dialog.showModal();
+  function open(next = 'login', source) {
+    opener = source; setMode(next); if (!dialog.open) dialog.showModal();
   }
-  function render(user) {
-    login.hidden = signup.hidden = Boolean(user);
-    logout.hidden = name.hidden = !user;
-    name.textContent = user ? "Hi, " + (user.user_metadata?.username || "there") : "";
+  function errorText(error) {
+    if (/email.*not.*authorized|email_address_not_authorized/i.test(error.code || error.message || '')) return 'Email confirmations aren’t ready yet. Please tell your fundraiser organizer.';
+    if (/rate|too many/i.test(error.message || '')) return 'A few too many tries. Wait a little, then try again.';
+    return error.message || 'That didn’t work. Please try again.';
   }
-  function readable(error) {
-    if (/email.*not.*authorized|email_address_not_authorized/i.test(error.code || error.message || "")) return "Email signup is not ready yet. Please contact the school; the confirmation email service still needs setup.";
-    if (/rate|too many/i.test(error.message || "")) return "Too many attempts. Please wait a little and try again.";
-    return error.message || "Something went wrong. Please try again.";
-  }
-  login.addEventListener("click", () => open("login", login));
-  signup.addEventListener("click", () => open("signup", signup));
-  document.getElementById("closeAccount").addEventListener("click", () => dialog.close());
-  dialog.addEventListener("close", () => { password.value = ""; if (opener && !opener.hidden) opener.focus(); });
-  switcher.addEventListener("click", () => { if (!busy) setMode(mode === "signup" ? "login" : "signup"); });
-  form.addEventListener("submit", async function (event) {
+  function details() { return { name: $('accountStudentName').value.trim(), grade: Number($('accountGrade').value), class_name: $('accountClass').value.trim() }; }
+  form.addEventListener('submit', async event => {
     event.preventDefault();
     if (busy || !form.reportValidity()) return;
-    busy = true; submit.disabled = switcher.disabled = reset.disabled = true;
-    message.textContent = "Please wait…";
+    const client = await ready; if (!client) return;
+    busy = true; $('submitAccount').disabled = true; $('switchAccount').disabled = true;
+    message.textContent = 'One moment…';
     try {
-      if (mode === "signup") {
-        const { error } = await client.auth.signUp({ email: email.value.trim(), password: password.value,
-          options: { data: { username: username.value.trim() }, emailRedirectTo: returnUrl } });
+      const returnUrl = new URL('index.html', location.href).href;
+      if (mode === 'signup') {
+        const email = $('accountEmail').value.trim().toLowerCase();
+        if (!/^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@gmail\.com$/i.test(email)) throw new Error('Please use your Gmail address.');
+        const { data, error } = await client.auth.signUp({ email, password: $('accountPassword').value, options: { data: details(), emailRedirectTo: returnUrl } });
         if (error) throw error;
-        password.value = "";
-        message.textContent = "If this email can be registered, a confirmation link will arrive in your inbox. Open it, then return here to log in. Check your spam folder too.";
-      } else if (mode === "recovery") {
-        const { error } = await client.auth.updateUser({ password: password.value });
+        $('accountPassword').value = '';
+        if (data.session) { dialog.close(); }
+        else message.textContent = 'Check your Gmail for a confirmation link, then come back here and log in. Have a look in spam too.';
+      } else if (mode === 'recovery') {
+        const { error } = await client.auth.updateUser({ password: $('accountPassword').value });
         if (error) throw error;
-        password.value = "";
-        message.textContent = "Your password has been updated.";
+        $('accountPassword').value = ''; message.textContent = 'Your password is saved. You can close this window.';
+      } else if (mode === 'profile') {
+        const d = details();
+        const updated = await client.auth.updateUser({ data: d });
+        if (updated.error) throw updated.error;
+        dialog.close(); window.dispatchEvent(new Event('hawk:profile'));
       } else {
-        const { data, error } = await client.auth.signInWithPassword({ email: email.value.trim(), password: password.value });
+        const { error } = await client.auth.signInWithPassword({ email: $('accountEmail').value.trim(), password: $('accountPassword').value });
         if (error) throw error;
-        render(data.user); dialog.close();
+        const updated = await client.auth.updateUser({ data: details() });
+        if (updated.error) throw updated.error;
+        dialog.close();
       }
-    } catch (error) { message.textContent = readable(error); }
-    finally { busy = false; submit.disabled = switcher.disabled = reset.disabled = false; }
+    } catch (error) { message.textContent = errorText(error); }
+    finally { busy = false; $('submitAccount').disabled = $('switchAccount').disabled = false; }
   });
-  reset.addEventListener("click", async function () {
-    if (busy) return;
-    if (!email.reportValidity() || !email.value) { email.focus(); return; }
-    busy = true; submit.disabled = switcher.disabled = reset.disabled = true;
+  $('loginButton').addEventListener('click', () => open('login', $('loginButton')));
+  $('signupButton').addEventListener('click', () => open('signup', $('signupButton')));
+  $('closeAccount').addEventListener('click', () => { if (!busy) dialog.close(); });
+  dialog.addEventListener('close', () => { $('accountPassword').value = ''; if (opener && !opener.hidden) opener.focus(); });
+  $('switchAccount').addEventListener('click', () => { if (!busy) setMode(mode === 'signup' ? 'login' : 'signup'); });
+  $('resetPassword').addEventListener('click', async () => {
+    if (busy || !$('accountEmail').reportValidity()) return;
+    busy = true; $('resetPassword').disabled = true;
     try {
-      const { error } = await client.auth.resetPasswordForEmail(email.value.trim(), { redirectTo: returnUrl });
+      const client = await ready; if (!client) throw new Error('Refresh and try again.');
+      const { error } = await client.auth.resetPasswordForEmail($('accountEmail').value.trim(), { redirectTo: new URL('index.html', location.href).href });
       if (error) throw error;
-      message.textContent = "If an account exists for this email, a password reset link will arrive in your inbox.";
-    } catch (error) { message.textContent = readable(error); }
-    finally { busy = false; submit.disabled = switcher.disabled = reset.disabled = false; }
+      message.textContent = 'If this email has an account, a reset link will arrive in your inbox.';
+    } catch (error) { message.textContent = errorText(error); }
+    finally { busy = false; $('resetPassword').disabled = false; }
   });
-  logout.addEventListener("click", async function () {
-    logout.disabled = true;
-    try { const { error } = await client.auth.signOut(); if (error) throw error; render(null); }
-    catch (error) { status.textContent = readable(error); }
-    finally { logout.disabled = false; }
+  $('logoutButton').addEventListener('click', async () => {
+    $('logoutButton').disabled = true;
+    try { const client = await ready; const { error } = await client.auth.signOut(); if (error) throw error; }
+    catch (error) { $('accountStatus').textContent = errorText(error); }
+    finally { $('logoutButton').disabled = false; }
   });
-  client.auth.onAuthStateChange((event, session) => {
-    render(session?.user);
-    if (event === "PASSWORD_RECOVERY") setTimeout(() => open("recovery", login), 0);
-  });
-  client.auth.getSession().then(({ data, error }) => {
-    if (error) throw error;
-    render(data.session?.user);
-    status.textContent = "";
-    login.disabled = signup.disabled = false;
-  }).catch(() => { status.textContent = "Accounts could not load. Please refresh and try again."; });
+  window.HawkAuth = { ready, open, get user() { return currentUser; }, async requireUser() {
+    const client = await ready;
+    if (!client) throw new Error('Accounts couldn’t load. Refresh and try again.');
+    const { data, error } = await client.auth.getUser();
+    if (error || !data.user) { open('login'); throw new Error('Log in or create an account to continue.'); }
+    return data.user;
+  } };
 })();

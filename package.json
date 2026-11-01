@@ -1,0 +1,13 @@
+{
+  "dependencies": {
+    "@vercel/blob": "2.8.2"
+  },
+  "name": "mywebsite",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/hawk.test.cjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
