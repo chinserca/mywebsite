@@ -77,3 +77,17 @@ test('server reads identity from Supabase instead of trusting client-supplied id
     assert.ok(email.body.includes('Sam Student')); assert.ok(!email.body.includes('fake@gmail.com'));
   } finally { global.fetch=original; }
 });
+test('new products persist and work in inventory emails and review validation', async () => {
+  const store=createStore(memoryBlob());
+  const added=await store.addProduct({name:'Desk dragon',price:425,description:'A small dragon for your desk.'});
+  const catalog=await store.products();assert.ok(catalog.some(p=>p.id===added.id));
+  const email=core.prepareEmail(user,{...order(),items:[{id:added.id,quantity:2}]},catalog);
+  assert.ok(email.body.includes('2 × Desk dragon'));assert.ok(email.body.includes('$8.50'));
+  assert.equal(core.validateReview({topic:added.id,body:'Nice',rating:4},catalog).p_topic,added.id);
+});
+test('adding products requires a valid server admin session', async () => {
+  const handler=createHandler({store:createStore(memoryBlob())});let status;
+  const res={setHeader(){},status(s){status=s;return this;},json(data){assert.match(data.error,/admin/);}};
+  await handler({method:'POST',url:'/?action=add-product',headers:{host:'site.test',origin:'https://site.test'},body:{name:'Unauthorized',price:100,description:'Not allowed'}},res);
+  assert.equal(status,403);
+});

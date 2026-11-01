@@ -1,4 +1,4 @@
-(function () {
+window.HawkCatalogReady = (async function () {
   'use strict';
   const $ = id => document.getElementById(id);
   const products = window.HawkCatalog;
@@ -48,7 +48,19 @@
   window.addEventListener('storage', () => { updateCount(); window.dispatchEvent(new Event('hawk:cart')); });
   window.HawkAuth.ready.then(() => { currentUser = window.HawkAuth.user; updateCount(); });
 
-  document.querySelectorAll('.catalog .card').forEach((card, i) => {
+  try {
+    const catalog = await api('products');
+    products.splice(0,products.length,...catalog);
+    const collection = document.querySelector('.catalog');
+    if (collection) for (const product of products.slice(6)) {
+      const card = node('article',undefined,'card');
+      const art = node('div',product.name,'product-art blue new-product-art');
+      const info = node('div',undefined,'product-info'); info.append(node('h3',product.name),node('span',money(product.price)));
+      card.append(art,info,node('p',product.description));
+      collection.insertBefore(card,$('addItemCard'));
+    }
+  } catch { $('accountStatus').textContent = 'The latest collection couldn’t load. Refresh before ordering.'; }
+  document.querySelectorAll('.catalog .card:not(.admin-add-card)').forEach((card, i) => {
     const product = products[i]; if (!product) return;
     const summary = node('p', 'No ratings yet', 'product-rating'); summary.dataset.ratingTopic = product.id;
     const actions = node('div', undefined, 'product-actions');
@@ -158,7 +170,7 @@
     try { const state = await api('admin-session'); showAdmin(state.admin); }
     catch (error) { $('adminMessage').textContent = error.message; }
   });
-  function showAdmin(admin) { $('adminForm').hidden = admin; $('adminPanel').hidden = !admin; $('adminButton').textContent = admin ? 'Admin · signed in' : 'Admin'; }
+  function showAdmin(admin) { if ($('addItemCard')) $('addItemCard').hidden = !admin; $('adminForm').hidden = admin; $('adminPanel').hidden = !admin; $('adminButton').textContent = admin ? 'Admin · signed in' : 'Admin'; }
   $('adminForm').addEventListener('submit', async event => {
     event.preventDefault(); const button = event.submitter, form = event.currentTarget; button.disabled = true;
     try {
@@ -170,5 +182,18 @@
   });
   $('adminDialog').addEventListener('close', () => $('adminForm').reset());
   $('adminLogout').addEventListener('click', async () => { try { await api('admin-logout',{}); showAdmin(false); } catch (error) { $('adminMessage').textContent = error.message; } });
+  if ($('addItemButton')) {
+    $('addItemButton').addEventListener('click', () => { $('newItemMessage').textContent = ''; $('newItemDialog').showModal(); });
+    $('newItemForm').addEventListener('submit', async event => {
+      event.preventDefault(); const form = event.currentTarget,button = event.submitter; button.disabled = true;
+      try {
+        const data = new FormData(form), dollars = Number(data.get('price'));
+        await api('add-product',{ name: data.get('name'),description: data.get('description'),price: Math.round(dollars*100) });
+        window.location.reload();
+      } catch (error) { $('newItemMessage').textContent = error.message; }
+      finally { button.disabled = false; }
+    });
+  }
+  api('admin-session').then(state => showAdmin(state.admin)).catch(() => {});
   loadRatings();
 })();

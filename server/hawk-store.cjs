@@ -25,6 +25,16 @@ function createStore(blob) {
     return { average: ratings.length ? Math.round(ratings.reduce((sum,c) => sum+c.rating,0)/ratings.length*10)/10 : null,count: ratings.length };
   }
   return {
+    async products() { return [...require('../website 1/catalog.js'),...((await read('hawk/catalog/items.json')).value || [])]; },
+    async addProduct(input) {
+      const item = { id: 'print-' + crypto.randomUUID(),name: input.name,price: input.price,description: input.description };
+      await mutate('hawk/catalog/items.json',current => {
+        const items = current || [];
+        if (items.length >= 100) { const e = new Error('The catalog has reached its 100-item limit.'); e.status=400; throw e; }
+        return [...items,item];
+      });
+      return item;
+    },
     async ratings(topics) {
       const rows = await Promise.all(topics.map(async topic => [topic,summary((await read(topicPath(topic))).value || [])]));
       return Object.fromEntries(rows);

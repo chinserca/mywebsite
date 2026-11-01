@@ -1,4 +1,5 @@
-(function () {
+(async function () {
+  await window.HawkCatalogReady;
   'use strict';
   const $ = id => document.getElementById(id);
   const { node, money, products, api } = window.Hawk;

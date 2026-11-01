@@ -1,0 +1,24 @@
+{
+  "rewrites": [
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "hawktech3d.vercel.app"
+        }
+      ],
+      "destination": "/website%201/index.html"
+    },
+    {
+      "source": "/:file",
+      "has": [
+        {
+          "type": "host",
+          "value": "hawktech3d.vercel.app"
+        }
+      ],
+      "destination": "/website%201/:file"
+    }
+  ]
+}

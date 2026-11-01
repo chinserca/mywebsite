@@ -7,9 +7,9 @@ const TERMS = '2026-11-01';
 const ADMIN_EMAIL = 'leocoobie@gmail.com';
 const topics = new Set(['ideas', ...products.map(p => p.id)]);
 class HttpError extends Error { constructor(status,message) { super(message); this.status = status; } }
-function validTopic(topic) { if (!topics.has(topic)) throw new HttpError(400,'Choose an item or the design-ideas discussion.'); return topic; }
-function validateReview(body) {
-  const topic = validTopic(body.topic);
+function validTopic(topic,catalog = products) { if (topic !== 'ideas' && !catalog.some(p => p.id === topic)) throw new HttpError(400,'Choose an item or the design-ideas discussion.'); return topic; }
+function validateReview(body,catalog = products) {
+  const topic = validTopic(body.topic,catalog);
   if (typeof body.body !== 'string' || body.body.trim().length > 1000) throw new HttpError(400,'Keep your comment under 1,000 characters.');
   const rating = body.rating;
   if (rating !== null && (!Number.isInteger(rating) || rating < 1 || rating > 5)) throw new HttpError(400,'Choose 1–5 stars or no rating.');
@@ -17,13 +17,13 @@ function validateReview(body) {
   if (!body.body.trim() && rating === null) throw new HttpError(400,'Write a comment or choose a star rating.');
   return { p_topic: topic,p_body: body.body.trim(),p_rating: rating };
 }
-function validateOrder(body) {
+function validateOrder(body,catalog = products) {
   if (body.accepted !== true || body.terms !== TERMS) throw new HttpError(400,'Read and accept the current Terms of Service.');
   if (typeof body.id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(body.id)) throw new HttpError(400,'Invalid order reference. Refresh and try again.');
-  if (!Array.isArray(body.items) || body.items.length < 1 || body.items.length > 6) throw new HttpError(400,'Add at least one design to your inventory.');
+  if (!Array.isArray(body.items) || body.items.length < 1 || body.items.length > catalog.length) throw new HttpError(400,'Add at least one design to your inventory.');
   const seen = new Set(); let quantity = 0;
   const items = body.items.map(item => {
-    if (!item || !products.some(p => p.id === item.id) || seen.has(item.id) || !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 20) throw new HttpError(400,'Check your items and quantities.');
+    if (!item || !catalog.some(p => p.id === item.id) || seen.has(item.id) || !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 20) throw new HttpError(400,'Check your items and quantities.');
     seen.add(item.id); quantity += item.quantity; return { id: item.id,quantity: item.quantity };
   });
   if (quantity > 20) throw new HttpError(400,'Your inventory can contain at most 20 items.');
@@ -80,9 +80,9 @@ function profile(user) {
   if (typeof data.name !== 'string' || data.name.trim().length < 1 || data.name.trim().length > 80 || !Number.isInteger(Number(data.grade)) || Number(data.grade) < 2 || Number(data.grade) > 12 || typeof data.class_name !== 'string' || !data.class_name.trim() || data.class_name.trim().length > 40) throw new HttpError(400,'Add your name, grade, and class using “Add or update your details” first.');
   return { name: data.name.trim(),grade: Number(data.grade),class_name: data.class_name.trim(),email: user.email };
 }
-function prepareEmail(user,input) {
-  const order = validateOrder(input), student = profile(user);
-  const lines = order.p_items.map(item => { const p = products.find(p => p.id === item.id); return { ...p,quantity: item.quantity }; });
+function prepareEmail(user,input,catalog = products) {
+  const order = validateOrder(input,catalog), student = profile(user);
+  const lines = order.p_items.map(item => { const p = catalog.find(p => p.id === item.id); return { ...p,quantity: item.quantity }; });
   const money = cents => '$' + (cents/100).toFixed(2);
   const total = lines.reduce((sum,p) => sum+p.price*p.quantity,0);
   const body = ['HawkTech3D inventory request','Reference: ' + input.id,'','Student name: ' + student.name,'Gmail: ' + student.email,'Grade: ' + student.grade,'Class: ' + student.class_name,'','Items:',...lines.map(p => p.quantity + ' × ' + p.name + ' — base cost ' + money(p.price) + ' each; ' + money(p.price*p.quantity) + ' total'),'','Total base cost: ' + money(total),'Final student price and availability to be confirmed by the fundraiser organizer. Payment is in person.','','Terms accepted: ' + TERMS,'If I buy an item and change my mind, I must still pay 50% of its original confirmed purchase price, and I will not receive the item.','','Please confirm my order details.'].join('\n');
