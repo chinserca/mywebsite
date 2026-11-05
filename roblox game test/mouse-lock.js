@@ -1,5 +1,5 @@
 // Desktop pointer lock keeps the cursor inside gameplay; Escape always releases it.
-export function setupMouseLock({THREE,canvas,camera,orbit,isBlocked,onMessage}){
+export function setupMouseLock({THREE,canvas,camera,orbit,isBlocked,onMessage,onZoom}){
  const button=document.getElementById('lockMouse');
  const reticle=document.getElementById('reticle');
  let wasLocked=false,intentionalRelease=false,lastUnlock=-Infinity;
@@ -22,6 +22,15 @@ export function setupMouseLock({THREE,canvas,camera,orbit,isBlocked,onMessage}){
   else{const showHint=wasLocked&&!intentionalRelease&&!isBlocked();lastUnlock=performance.now();wasLocked=false;intentionalRelease=false;orbit.enableDamping=true;orbit.enabled=!isBlocked();if(showHint)onMessage('Mouse unlocked. Click Lock mouse to lock again, or press Esc to pause.');}
   draw();
  });
+ // OrbitControls handles ordinary scroll and touch pinch. Capture wheel input
+ // ourselves while locked, because OrbitControls is disabled for mouse look.
+ canvas.addEventListener('wheel',event=>{
+  if(!locked()||isBlocked())return;
+  event.preventDefault();event.stopImmediatePropagation();
+  const unit=event.deltaMode===1?16:event.deltaMode===2?canvas.clientHeight:1;
+  const delta=Math.max(-240,Math.min(240,event.deltaY*unit));
+  if(delta)onZoom(Math.exp(delta*.0015));
+ },{passive:false,capture:true});
  document.addEventListener('mousemove',event=>{
   if(!locked()||isBlocked())return;
   const offset=camera.position.clone().sub(orbit.target),spherical=new THREE.Spherical().setFromVector3(offset);

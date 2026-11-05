@@ -90,3 +90,5 @@ A purple shop inside the factory offers permanent purchases using in-game money,
 - Touch devices keep drag camera controls, and unsupported browsers retain drag controls.
 
 - Visible + and − zoom buttons sit on the right above movement controls. Keyboard + and − also zoom, including while the mouse is locked. Camera distance remains within safe limits.
+
+- The mouse wheel zooms while the cursor is locked as well as unlocked. Touch pinch and the visible + / − buttons remain available for iPad players.
