@@ -50,7 +50,7 @@ A purple shop inside the factory offers permanent purchases using in-game money,
 
 ## Rocket and alien research
 
-- A rocket beside the factory costs $50,000 in game money, purchased once after the conveyor.
+- A rocket beside the factory costs $1,000 in game money, purchased once after the conveyor.
 - Ride the rocket to a separate International Alien Lab, with a free return pad back to Earth.
 - Pick up a free alien net in the material yard. Equip it to catch nearby Jade Hoppers, Violet Floaters, and Solar Sprouts.
 - Carry up to 6 aliens separately from materials. Aliens reappear after 20 seconds.

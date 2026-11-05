@@ -7,7 +7,7 @@ export const shopItems=[{id:'backpack',name:'Bigger backpack',price:250,descript
 export function capacity(s){return s.upgrades?.backpack?12:8;}
 export function materialValue(s,i){return Math.round(materials[i].value*(s.studied?.[i]?1.5:1)*(s.upgrades?.processor?1.25:1));}
 export function act(s,action,index){
- if(action==='rocket'&&s.conveyor&&!s.rocket&&s.money>=50000){s.money-=50000;s.rocket=true;return 'Rocket purchased! Ride it to the International Alien Lab.';}
+ if(action==='rocket'&&s.conveyor&&!s.rocket&&s.money>=1000){s.money-=1000;s.rocket=true;return 'Rocket purchased! Ride it to the International Alien Lab.';}
  if(action==='net'&&s.conveyor&&!s.net){s.net=true;return 'Alien net collected! Equip it and approach an alien in the material yard.';}
  if(action==='catch'&&s.net&&Number.isInteger(index)&&alienTypes[index]&&(s.aliens??[0,0,0]).reduce((a,b)=>a+b,0)<6){s.aliens??=[0,0,0];s.aliens[index]++;return alienTypes[index].name+' safely caught! Study it at the International Alien Lab.';}
  if(action==='alienStudy'&&s.rocket&&Number.isInteger(index)&&alienTypes[index]&&s.aliens?.[index]>0){s.alienStudies??=[0,0,0];s.aliens[index]--;s.alienStudies[index]++;s.money+=1000;return alienTypes[index].name+' studied and released! Research grant: $1,000.';}
