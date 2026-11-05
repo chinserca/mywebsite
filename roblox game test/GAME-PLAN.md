@@ -64,3 +64,13 @@ A purple shop inside the factory offers permanent purchases using in-game money,
 - Pausing freezes movement, animations, respawn timers, and rocket travel.
 - Resume (or Escape again) continues the current game.
 - Restart explains that saved progress will be cleared and asks for confirmation before resetting to $1,000.
+
+## Adventure expansion
+
+- Colorful campus paths, glowing station rings, trees, flowers, lamps, factory steam, space-lab specimens, stars, and an observation planet.
+- Delivery jobs at the orange desk pay 60% above current material value and consume the requested materials. Orders can be repeated.
+- Eight hidden energy crystals: five on Earth reward $250 each, three in the orbital lab reward $500 each. Each crystal pays once per saved game.
+- BEE-BOT costs $1,500 at the upgrade shop and automatically collects available material spools within 5 units while there is backpack space.
+- Space or Sprint gives a 1.5-second speed boost, available every 6 seconds. Pausing freezes its timers.
+- Guide cycles through Materials, Aliens, Deliveries, and Crystals. Cargo toggles the material and alien panels.
+- Delivery totals and crystal discoveries persist with existing saves; no progress reset is required.
