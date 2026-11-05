@@ -28,4 +28,6 @@ A 3D Roblox factory game.
 
 ## Development status
 
-This file records the agreed game plan. The Roblox gameplay has not been implemented yet.
+A playable single-player browser prototype is implemented in index.html, game.js, state.js, and style.css. It uses a 3D scene with keyboard and touch controls, factory claiming, conveyor purchasing, material collection, funnel deposits, and local progress saving. It has not been published as a Roblox experience.
+
+Prototype material payouts per spool: PLA $65, TPU $85, Metal $150, PETG $80, PETG-CF $120, PLA-CF $110, TPU-CF $130. The backpack holds 8 spools; collected materials reappear after 8 seconds. Payouts are credited on deposit while the conveyor animates the materials. These values can be changed as the game design develops.
