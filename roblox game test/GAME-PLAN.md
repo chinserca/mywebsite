@@ -57,3 +57,10 @@ A purple shop inside the factory offers permanent purchases using in-game money,
 - Study and release captured aliens at the lab bench for a $1,000 research grant per specimen. Track the number of studies for each species.
 - A Guide: Aliens button directs the blue arrow to the net, aliens, rocket, study bench, and return pad.
 - Rocket ownership, net ownership, captures, and research counts save with existing progress.
+
+## Pause and restart
+
+- Escape or the Pause button opens a menu with Resume and Restart.
+- Pausing freezes movement, animations, respawn timers, and rocket travel.
+- Resume (or Escape again) continues the current game.
+- Restart explains that saved progress will be cleared and asks for confirmation before resetting to $1,000.
