@@ -74,3 +74,10 @@ A purple shop inside the factory offers permanent purchases using in-game money,
 - Space or Sprint gives a 1.5-second speed boost, available every 6 seconds. Pausing freezes its timers.
 - Guide cycles through Materials, Aliens, Deliveries, and Crystals. Cargo toggles the material and alien panels.
 - Delivery totals and crystal discoveries persist with existing saves; no progress reset is required.
+
+## Future Roblox monetization
+
+- Optional permanent cosmetic passes: VIP Factory Owner (suggested 99 Robux), Golden Comet Trail (49 Robux), and Nebula Aura (79 Robux). Actual prices are set in Roblox.
+- The browser game shows an inactive preview with a creator setup guide and downloadable Roblox Studio scripts. It never accepts Robux or grants paid ownership locally.
+- The Roblox package checks ownership on the server and reapplies perks on respawn/rejoin. All pass IDs default to zero so purchase prompts remain disabled until configured.
+- A published Roblox experience and the creator’s real game pass IDs are still required. This package does not convert the browser game into a Roblox place.
