@@ -47,3 +47,13 @@ A purple shop inside the factory offers permanent purchases using in-game money,
 - Running boots: $350, increases movement speed by 25%.
 - Conveyor upgrade: $750, increases all material payouts by 25%, combined with research before rounding.
 - Each upgrade can be purchased once and saves with progress.
+
+## Rocket and alien research
+
+- A rocket beside the factory costs $50,000 in game money, purchased once after the conveyor.
+- Ride the rocket to a separate International Alien Lab, with a free return pad back to Earth.
+- Pick up a free alien net in the material yard. Equip it to catch nearby Jade Hoppers, Violet Floaters, and Solar Sprouts.
+- Carry up to 6 aliens separately from materials. Aliens reappear after 20 seconds.
+- Study and release captured aliens at the lab bench for a $1,000 research grant per specimen. Track the number of studies for each species.
+- A Guide: Aliens button directs the blue arrow to the net, aliens, rocket, study bench, and return pad.
+- Rocket ownership, net ownership, captures, and research counts save with existing progress.
