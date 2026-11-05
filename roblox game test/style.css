@@ -14,3 +14,6 @@
 #robuxExtras{max-height:85vh;overflow:auto}#robuxExtras .order-card small{display:block;margin-bottom:10px;color:#ffdc83}#robuxExtrasButton{color:#ffdc83}.setup-link{display:block;text-align:center;color:#8df7d8;font-size:13px;padding:13px}#closeRobuxExtras{margin-top:10px}
 
 #reticle{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:none;color:#e2fff5;font-size:22px;font-weight:400;text-shadow:0 1px 4px #123;z-index:2}.mouse-locked #world canvas{cursor:none}header #lockMouse{color:#8df7d8}@media(pointer:coarse){#lockMouse{display:none}}
+
+.zoom-controls{position:absolute;right:24px;bottom:210px;display:flex;flex-direction:column;align-items:center;gap:7px;background:#142d40ed;border:1px solid #b9e7f33b;border-radius:14px;padding:8px;z-index:3}.zoom-controls button{width:42px;height:38px;border-radius:9px;background:#8df7d8;color:#143549;font-size:25px;line-height:1}.zoom-controls span{font-size:8px;letter-spacing:1px;color:#c3dedf}.zoom-controls button:hover{background:#bdffec}@media(max-width:720px){.zoom-controls{right:14px;bottom:175px;padding:6px}.zoom-controls button{width:35px;height:33px}}
+@media(min-width:721px){.zoom-controls{right:200px;bottom:28px;flex-direction:row}.zoom-controls span{order:-1;padding:0 5px}}

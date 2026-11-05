@@ -88,3 +88,5 @@ A purple shop inside the factory offers permanent purchases using in-game money,
 - The first Escape releases the cursor without pausing. Press Escape again while unlocked to open the pause menu. Dialogs release the cursor to allow button use.
 - Clicking Resume attempts to lock again; the player can also click the scene to lock.
 - Touch devices keep drag camera controls, and unsupported browsers retain drag controls.
+
+- Visible + and − zoom buttons sit on the right above movement controls. Keyboard + and − also zoom, including while the mouse is locked. Camera distance remains within safe limits.
