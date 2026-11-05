@@ -81,3 +81,10 @@ A purple shop inside the factory offers permanent purchases using in-game money,
 - The browser game shows an inactive preview with a creator setup guide and downloadable Roblox Studio scripts. It never accepts Robux or grants paid ownership locally.
 - The Roblox package checks ownership on the server and reapplies perks on respawn/rejoin. All pass IDs default to zero so purchase prompts remain disabled until configured.
 - A published Roblox experience and the creator’s real game pass IDs are still required. This package does not convert the browser game into a Roblox place.
+
+## Mouse locking
+
+- On desktop, click the game or Lock mouse to capture the cursor and look around with mouse movement.
+- Escape releases the cursor and opens the pause menu. Dialogs release the cursor to allow button use.
+- Clicking Resume attempts to lock again; the player can also click the scene to lock.
+- Touch devices keep drag camera controls, and unsupported browsers retain drag controls.

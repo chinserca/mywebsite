@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {buildAdventureWorld} from './world.js';
+import {setupMouseLock} from './mouse-lock.js';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {materials,newState,validState,act,materialValue,capacity,shopItems,alienTypes,orders,orderValue} from './state.js';
 const $=id=>document.getElementById(id),saveKey='the-factory-v1';let state=newState();
@@ -90,7 +91,8 @@ function pauseGame(){
  $('pauseChoices').hidden=false;$('restartChoices').hidden=true;$('pauseError').textContent='';orbit.enabled=false;$('pauseMenu').showModal();
 }
 function resumeGame(){keys.clear();$('pauseMenu').close();orbit.enabled=!flight;}
-$('pauseButton').onclick=pauseGame;$('resumeGame').onclick=resumeGame;
+const mouseLock=setupMouseLock({THREE,canvas:renderer.domElement,camera,orbit,isBlocked:modalOpen,pause:pauseGame,onMessage:notify});
+$('pauseButton').onclick=pauseGame;$('resumeGame').onclick=()=>{resumeGame();mouseLock.request();};
 $('pauseMenu').addEventListener('cancel',e=>{e.preventDefault();resumeGame();});
 $('restartGame').onclick=()=>{$('pauseChoices').hidden=true;$('restartChoices').hidden=false;$('cancelRestart').focus();};
 $('cancelRestart').onclick=()=>{$('restartChoices').hidden=true;$('pauseChoices').hidden=false;$('resumeGame').focus();};
