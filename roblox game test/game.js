@@ -91,7 +91,7 @@ function pauseGame(){
  $('pauseChoices').hidden=false;$('restartChoices').hidden=true;$('pauseError').textContent='';orbit.enabled=false;$('pauseMenu').showModal();
 }
 function resumeGame(){keys.clear();$('pauseMenu').close();orbit.enabled=!flight;}
-const mouseLock=setupMouseLock({THREE,canvas:renderer.domElement,camera,orbit,isBlocked:modalOpen,pause:pauseGame,onMessage:notify});
+const mouseLock=setupMouseLock({THREE,canvas:renderer.domElement,camera,orbit,isBlocked:modalOpen,onMessage:notify});
 $('pauseButton').onclick=pauseGame;$('resumeGame').onclick=()=>{resumeGame();mouseLock.request();};
 $('pauseMenu').addEventListener('cancel',e=>{e.preventDefault();resumeGame();});
 $('restartGame').onclick=()=>{$('pauseChoices').hidden=true;$('restartChoices').hidden=false;$('cancelRestart').focus();};

@@ -1,5 +1,5 @@
 // Desktop pointer lock keeps the cursor inside gameplay; Escape always releases it.
-export function setupMouseLock({THREE,canvas,camera,orbit,isBlocked,pause,onMessage}){
+export function setupMouseLock({THREE,canvas,camera,orbit,isBlocked,onMessage}){
  const button=document.getElementById('lockMouse');
  const reticle=document.getElementById('reticle');
  let wasLocked=false,intentionalRelease=false,lastUnlock=-Infinity;
@@ -19,7 +19,7 @@ export function setupMouseLock({THREE,canvas,camera,orbit,isBlocked,pause,onMess
  document.addEventListener('pointerlockchange',()=>{
   const active=locked();
   if(active){wasLocked=true;orbit.enableDamping=false;orbit.update();orbit.enabled=false;}
-  else{const shouldPause=wasLocked&&!intentionalRelease&&!isBlocked();lastUnlock=performance.now();wasLocked=false;intentionalRelease=false;orbit.enableDamping=true;orbit.enabled=!isBlocked();if(shouldPause)pause();}
+  else{const showHint=wasLocked&&!intentionalRelease&&!isBlocked();lastUnlock=performance.now();wasLocked=false;intentionalRelease=false;orbit.enableDamping=true;orbit.enabled=!isBlocked();if(showHint)onMessage('Mouse unlocked. Click Lock mouse to lock again, or press Esc to pause.');}
   draw();
  });
  document.addEventListener('mousemove',event=>{
@@ -29,8 +29,8 @@ export function setupMouseLock({THREE,canvas,camera,orbit,isBlocked,pause,onMess
   spherical.phi=Math.max(orbit.minPolarAngle,Math.min(orbit.maxPolarAngle,spherical.phi-event.movementY*.0025));
   camera.position.copy(orbit.target).add(offset.setFromSpherical(spherical));camera.lookAt(orbit.target);
  });
- // Do not let Escape both release the cursor and immediately resume the pause menu.
- addEventListener('keydown',event=>{if(event.key==='Escape'&&(locked()||performance.now()-lastUnlock<200)){event.stopImmediatePropagation();if(!event.repeat&&!document.getElementById('pauseMenu').open)pause();}},true);
+ // The first Escape only unlocks. A later Escape can open the pause menu.
+ addEventListener('keydown',event=>{if(event.key==='Escape'&&(locked()||performance.now()-lastUnlock<200)){event.stopImmediatePropagation();if(!event.repeat)release();}},true);
  // All dialogs release the cursor so players can use menu buttons.
  for(const dialog of document.querySelectorAll('dialog'))new MutationObserver(()=>{if(dialog.open)release();}).observe(dialog,{attributes:true,attributeFilter:['open']});
  document.addEventListener('visibilitychange',()=>{if(document.hidden)release();});

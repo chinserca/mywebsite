@@ -85,6 +85,6 @@ A purple shop inside the factory offers permanent purchases using in-game money,
 ## Mouse locking
 
 - On desktop, click the game or Lock mouse to capture the cursor and look around with mouse movement.
-- Escape releases the cursor and opens the pause menu. Dialogs release the cursor to allow button use.
+- The first Escape releases the cursor without pausing. Press Escape again while unlocked to open the pause menu. Dialogs release the cursor to allow button use.
 - Clicking Resume attempts to lock again; the player can also click the scene to lock.
 - Touch devices keep drag camera controls, and unsupported browsers retain drag controls.
