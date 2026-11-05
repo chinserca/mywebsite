@@ -38,3 +38,12 @@ Prototype material payouts per spool: PLA $65, TPU $85, Metal $150, PETG $80, PE
 - A blue research bench inside the factory lets players study each material once.
 - Studying consumes one spool of that material and permanently increases its selling value by 50%, rounded to the nearest whole dollar. No money is charged for research.
 - Research upgrades save with the player’s existing progress.
+
+## Upgrade shop
+
+A purple shop inside the factory offers permanent purchases using in-game money, unlocked after buying the conveyor:
+
+- Bigger backpack: $250, increases capacity from 8 to 12 spools.
+- Running boots: $350, increases movement speed by 25%.
+- Conveyor upgrade: $750, increases all material payouts by 25%, combined with research before rounding.
+- Each upgrade can be purchased once and saves with progress.
