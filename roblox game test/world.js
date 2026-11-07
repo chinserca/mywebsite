@@ -17,7 +17,11 @@ export function buildAdventureWorld({THREE,scene,box,label,player}){
  for(let x=8;x<26;x+=2)box(1.6,.06,1.2,x,.05,6,0xb3bba5);
  for(const [x,z] of [[-9,12],[-6,18],[0,20],[6,18],[9,12],[14,20],[-14,20]]){const pad=mesh(new THREE.CylinderGeometry(1.5,1.5,.12,24),0xb9c7b4,x,.03,z);pad.receiveShadow=true;}
  for(const x of [-31,31])for(let z=-18;z<=30;z+=4){box(.18,1.2,.18,x,.6,z,0xdeb27f);box(.15,.12,4,x,.8,z+2,0xeed3aa);}
- for(let i=0;i<24;i++){const side=i%2?-1:1,x=side*(20+(i%4)*3),z=-17+Math.floor(i/4)*8;const crown=mesh(new THREE.IcosahedronGeometry(1.6+(i%3)*.3,0),[0x5c9a79,0x72b18a,0x4b8b73][i%3],x,2.8,z);box(.28,2,.28,x,1,z,0x886646);crown.rotation.y=i;}
+ for(let i=0;i<24;i++){
+  const side=i%2?-1:1,x=side*(20+(i%4)*3),z=-17+Math.floor(i/4)*8;
+  // Keep trees and their canopies off the launch pad and its approach.
+  if(Math.abs(x-25)<5.5&&Math.abs(z-4)<5.5)continue;
+  const crown=mesh(new THREE.IcosahedronGeometry(1.6+(i%3)*.3,0),[0x5c9a79,0x72b18a,0x4b8b73][i%3],x,2.8,z);box(.28,2,.28,x,1,z,0x886646);crown.rotation.y=i;}
  for(let i=0;i<40;i++){const x=(i%2?-1:1)*(13+(i*7%17)),z=8+(i*11%25);mesh(new THREE.IcosahedronGeometry(.18,0),[0xffd66b,0xf395b8,0x9edbff][i%3],x,.35,z);}
  for(const [x,z] of [[-4,8],[4,8],[-4,25],[4,25],[21,7],[28,7]]){box(.15,2.8,.15,x,1.4,z,0x405c68);mesh(new THREE.SphereGeometry(.26,10,8),0xffdf8b,x,2.9,z,true);}
  // Slow steam puffs make the factory feel alive.
