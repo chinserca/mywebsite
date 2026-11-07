@@ -17,3 +17,9 @@
 
 .zoom-controls{position:absolute;right:24px;bottom:210px;display:flex;flex-direction:column;align-items:center;gap:7px;background:#142d40ed;border:1px solid #b9e7f33b;border-radius:14px;padding:8px;z-index:3}.zoom-controls button{width:42px;height:38px;border-radius:9px;background:#8df7d8;color:#143549;font-size:25px;line-height:1}.zoom-controls span{font-size:8px;letter-spacing:1px;color:#c3dedf}.zoom-controls button:hover{background:#bdffec}@media(max-width:720px){.zoom-controls{right:14px;bottom:175px;padding:6px}.zoom-controls button{width:35px;height:33px}}
 @media(min-width:721px){.zoom-controls{right:200px;bottom:28px;flex-direction:row}.zoom-controls span{order:-1;padding:0 5px}}
+
+.health{display:grid;grid-template-columns:auto minmax(50px,1fr) auto;align-items:center;gap:6px;margin-top:6px;font-size:10px}
+.health progress{width:100%;height:8px;accent-color:#ff807d}
+#pulse{position:absolute;right:24px;bottom:182px;padding:10px 17px;border-radius:10px;background:#ffdc83;color:#133549;font-size:11px;z-index:3}
+#pulse:disabled{background:#284a5d;color:#b4cbd5}
+@media(max-width:720px){#pulse{right:130px;bottom:116px;font-size:10px;padding:10px 12px}}
