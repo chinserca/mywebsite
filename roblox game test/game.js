@@ -161,16 +161,25 @@ const stepPads = [
  {region:'earth',...medStation,w:2,d:2,action:()=>health<100?'heal':null},
  {region:'earth',x:19,z:26,w:2,d:2,action:()=>state.conveyor&&!state.net?'net':null},
  {region:'earth',x:25,z:4,w:7,d:7,action:()=>state.conveyor?(state.rocket?'fly':'rocket'):null},
- {region:'lab',x:100,z:8,w:4,d:3,action:()=>state.rocket?'return':null}
+ {region:'lab',x:100,z:8,w:4,d:3,action:()=>state.rocket?'return':null},
+ ...spools.map((spool,index)=>({
+  region:'earth',x:spool.x,z:spool.z,radius:1.5,index,
+  action:()=>state.conveyor&&spool.available?'collect':null
+ }))
 ];
 let standingPad = null;
 function activateStepPad(position){
  if(modalOpen())return;
- const pad=stepPads.find(p=>p.region===location&&Math.abs(position.x-p.x)<=p.w/2&&Math.abs(position.z-p.z)<=p.d/2)??null;
+ const pad=stepPads.find(p=>{
+  if(p.region!==location)return false;
+  const dx=position.x-p.x,dz=position.z-p.z;
+  if(p.radius)return dx*dx+dz*dz<=p.radius*p.radius;
+  return Math.abs(dx)<=p.w/2&&Math.abs(dz)<=p.d/2;
+ })??null;
  if(pad===standingPad)return;
  standingPad=pad;
  const action=pad?.action();
- if(action)interact({action});
+ if(action)interact({action,index:pad.index});
 }
 function modalOpen(){return $('instructions').open||$('research').open||$('shop').open||$('alienResearch').open||$('pauseMenu').open||$('dispatch').open||$('robuxExtras').open||!!flight;}
 function startFlight(destination){if(!state.rocket||flight)return;keys.clear();flight={destination,start:gameNow};orbit.enabled=false;$('flight').hidden=false;$('flightDestination').textContent=destination==='lab'?'International Alien Lab':'The Factory · Earth';$('flightText').textContent=destination==='lab'?'Launching to the International Alien Lab…':'Returning to The Factory…';flame.visible=location==='earth';}
