@@ -23,3 +23,7 @@
 #pulse{position:absolute;right:24px;bottom:182px;padding:10px 17px;border-radius:10px;background:#ffdc83;color:#133549;font-size:11px;z-index:3}
 #pulse:disabled{background:#284a5d;color:#b4cbd5}
 @media(max-width:720px){#pulse{right:130px;bottom:116px;font-size:10px;padding:10px 12px}}
+/* Keep the zoom group clear of Interact when the desktop layout narrows. */
+@media(min-width:721px) and (max-width:960px){
+ .zoom-controls{right:24px;bottom:225px}
+}
