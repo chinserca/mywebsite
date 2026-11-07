@@ -6,14 +6,13 @@ export function setupMouseLock({THREE,canvas,camera,orbit,isBlocked,onMessage,on
  const locked=()=>document.pointerLockElement===canvas;
  function draw(){const active=locked();button.textContent=active?'Mouse locked · Esc':'Lock mouse';reticle.hidden=!active;document.body.classList.toggle('mouse-locked',active);}
  function release(){if(locked()){intentionalRelease=true;document.exitPointerLock();}}
- function failure(){draw();onMessage('Mouse lock is unavailable here. You can still drag to look around. Try opening the game in Chrome or Edge.');}
+ function failure(){draw();onMessage('Mouse lock is unavailable here. You can still right-click and drag to look around. Try opening the game in Chrome or Edge.');}
  async function request(){
   if(isBlocked()||locked())return;
   if(!canvas.requestPointerLock){failure();return;}
   intentionalRelease=false;
   try{await canvas.requestPointerLock();}catch{failure();}
  }
- canvas.addEventListener('click',e=>{if(e.pointerType!=='touch'&&matchMedia('(pointer:fine)').matches)request();});
  button.onclick=()=>{if(locked())release();else request();};
  document.addEventListener('pointerlockerror',failure);
  document.addEventListener('pointerlockchange',()=>{

@@ -10,7 +10,10 @@ const camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,.1,180);let r
 try{renderer=new THREE.WebGLRenderer({antialias:true});}catch{$('toast').textContent='This game needs WebGL. Try an up-to-date Chrome or Edge browser.';throw Error('WebGL unavailable');}
 renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;$('world').append(renderer.domElement);
 scene.add(new THREE.HemisphereLight(0xe8f5ff,0x60724d,2.5));const sun=new THREE.DirectionalLight(0xfff5d9,3);sun.position.set(-12,30,15);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-35,right:35,top:35,bottom:-35,far:80});scene.add(sun);
-const orbit=new OrbitControls(camera,renderer.domElement);orbit.enableDamping=true;orbit.enablePan=false;orbit.minDistance=7;orbit.maxDistance=38;orbit.minPolarAngle=.2;orbit.maxPolarAngle=Math.PI/2-.15;orbit.target.set(0,1,9);camera.position.set(0,18,28);orbit.update();
+const orbit=new OrbitControls(camera,renderer.domElement);
+orbit.mouseButtons.LEFT = null;
+orbit.mouseButtons.RIGHT = THREE.MOUSE.ROTATE;
+orbit.enableDamping=true;orbit.enablePan=false;orbit.minDistance=7;orbit.maxDistance=38;orbit.minPolarAngle=.2;orbit.maxPolarAngle=Math.PI/2-.15;orbit.target.set(0,1,9);camera.position.set(0,18,28);orbit.update();
 const colliders=[];
 function box(w,h,d,x,y,z,color,solid=false){const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({color,roughness:.75}));mesh.position.set(x,y,z);mesh.castShadow=true;mesh.receiveShadow=true;scene.add(mesh);if(solid)colliders.push({x,z,w,d});return mesh;}
 function label(text,x,y,z,color='#ffffff',size=1){const canvas=document.createElement('canvas');canvas.width=1024;canvas.height=160;const ctx=canvas.getContext('2d');ctx.fillStyle='#172c40';ctx.beginPath();ctx.roundRect(0,0,1024,160,22);ctx.fill();ctx.fillStyle=color;ctx.font='bold 65px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,512,83);const map=new THREE.CanvasTexture(canvas);const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map,depthTest:true}));sprite.position.set(x,y,z);sprite.scale.set(6.4*size,1*size,1);scene.add(sprite);return sprite;}
