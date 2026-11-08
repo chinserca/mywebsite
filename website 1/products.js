@@ -16,6 +16,22 @@
       { src: 'images/spiral-cone-separated.jpeg', alt: 'Brown spiral insert lying beside the black outer cone' },
       { src: 'images/spiral-cone-parts.jpeg', alt: 'Brown spiral insert and black outer cone standing separately' }
     ]
+,
+    'Castle': [
+      { src: 'images/castle-front.jpeg', alt: 'White castle with its gate fitted in the entrance' },
+      { src: 'images/castle-back.jpeg', alt: 'Rear view of the white castle and its raised gate' },
+      { src: 'images/castle-gate.jpeg', alt: 'White castle with its removable gate beside it' }
+    ],
+    'Spiral cone · small': [
+      { src: 'images/spiral-small-assembled.jpeg', alt: 'Yellow small spiral cone assembled' },
+      { src: 'images/spiral-small-open.jpeg', alt: 'Yellow small spiral cone in its open configuration' },
+      { src: 'images/spiral-small-parts.jpeg', alt: 'Two yellow spiral cone parts standing side by side' }
+    ],
+    'Two-sided word': [
+      { src: 'images/two-sided-word-hawks.jpeg', alt: 'White two-sided word design viewed from the HAWKS side' },
+      { src: 'images/two-sided-word-marine.jpeg', alt: 'White two-sided word design viewed from the MARINE side' },
+      { src: 'images/two-sided-word-angle.jpeg', alt: 'Angled view of the white two-sided word design' }
+    ]
   };
   let photos = [], opener, active = 0;
   function showPhoto(index) {
