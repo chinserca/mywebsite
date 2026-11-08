@@ -11,6 +11,16 @@
       "dest": "/website 1/index.html"
     },
     {
+      "src": "^/images/(.*)$",
+      "has": [
+        {
+          "type": "host",
+          "value": "hawktech3d.vercel.app"
+        }
+      ],
+      "dest": "/website 1/images/$1"
+    },
+    {
       "src": "^/([^/]+)$",
       "has": [
         {
