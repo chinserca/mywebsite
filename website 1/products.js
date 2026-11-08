@@ -64,7 +64,7 @@
     function openDetails() {
       opener = art;
       document.getElementById('productTitle').textContent = name;
-      document.getElementById('productDescription').textContent = card.querySelector(':scope > p').textContent;
+      document.getElementById('productDescription').textContent = card.dataset.description || card.querySelector(':scope > p').textContent;
       document.getElementById('productPrice').textContent = card.querySelector('.product-info > span').textContent;
       photos = galleries[name] || [];
       gallery.hidden = photos.length === 0; dialog.classList.toggle('has-gallery', !gallery.hidden);
