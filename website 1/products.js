@@ -5,24 +5,34 @@
   const gallery = document.getElementById('productGallery');
   const image = document.getElementById('galleryImage');
   const thumbnails = document.getElementById('galleryThumbnails');
-  const photos = [
+  const galleries = {
+    'Infinity cube': [
     { src: 'images/infinity-cube-open.jpeg', alt: 'Yellow and blue Infinity cube unfolded, showing its hinges' },
     { src: 'images/infinity-cube-folded.jpeg', alt: 'Infinity cube folded into a compact cube' },
     { src: 'images/infinity-cube-back.jpeg', alt: 'Reverse side of the unfolded Infinity cube, showing its yellow faces' }
-  ];
-  let opener, active = 0;
+    ],
+    'Spiral cone · big': [
+      { src: 'images/spiral-cone-assembled.jpeg', alt: 'Brown and black spiral cone fully assembled' },
+      { src: 'images/spiral-cone-separated.jpeg', alt: 'Brown spiral insert lying beside the black outer cone' },
+      { src: 'images/spiral-cone-parts.jpeg', alt: 'Brown spiral insert and black outer cone standing separately' }
+    ]
+  };
+  let photos = [], opener, active = 0;
   function showPhoto(index) {
     active = (index + photos.length) % photos.length;
     image.src = photos[active].src; image.alt = photos[active].alt;
     document.getElementById('galleryCounter').textContent = (active + 1) + ' / ' + photos.length;
     [...thumbnails.children].forEach((button, i) => button.setAttribute('aria-pressed', String(i === active)));
   }
-  photos.forEach((photo, i) => {
+  function buildThumbnails() {
+    thumbnails.replaceChildren();
+    photos.forEach((photo, i) => {
     const button = document.createElement('button'); button.type = 'button';
     button.setAttribute('aria-label', 'View photo ' + (i + 1) + ': ' + photo.alt);
     const thumb = document.createElement('img'); thumb.src = photo.src; thumb.alt = ''; thumb.width = 80; thumb.height = 60;
     button.append(thumb); button.addEventListener('click', () => showPhoto(i)); thumbnails.append(button);
   });
+  }
   dialog.querySelector('.gallery-prev').addEventListener('click', () => showPhoto(active - 1));
   dialog.querySelector('.gallery-next').addEventListener('click', () => showPhoto(active + 1));
   dialog.addEventListener('keydown', event => {
@@ -40,8 +50,9 @@
       document.getElementById('productTitle').textContent = name;
       document.getElementById('productDescription').textContent = card.querySelector(':scope > p').textContent;
       document.getElementById('productPrice').textContent = card.querySelector('.product-info > span').textContent;
-      gallery.hidden = name !== 'Infinity cube'; dialog.classList.toggle('has-gallery', !gallery.hidden);
-      if (!gallery.hidden) showPhoto(0);
+      photos = galleries[name] || [];
+      gallery.hidden = photos.length === 0; dialog.classList.toggle('has-gallery', !gallery.hidden);
+      if (!gallery.hidden) { buildThumbnails(); showPhoto(0); }
       dialog.showModal(); dialog.scrollTop = 0;
     }
     art.addEventListener('click', openDetails);
