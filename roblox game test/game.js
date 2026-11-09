@@ -269,7 +269,7 @@ function activateStepPad(position){
  const action=pad?.action();
  if(action)interact({action,index:pad.index});
 }
-function modalOpen(){return $('instructions').open||$('research').open||$('shop').open||$('alienResearch').open||$('pauseMenu').open||$('dispatch').open||$('robuxExtras').open||$('avatarDialog').open||$('blueprintDialog').open||!!flight;}
+function modalOpen(){return $('instructions').open||$('research').open||$('shop').open||$('alienResearch').open||$('pauseMenu').open||$('dispatch').open||$('robuxExtras').open||$('avatarDialog').open||$('blueprintDialog').open||$('cheatsDialog').open||!!flight;}
 function startFlight(destination){if(!state.rocket||flight)return;playSound('launch');keys.clear();flight={destination,start:gameNow};orbit.enabled=false;$('flight').hidden=false;$('flightDestination').textContent=destination==='lab'?'International Alien Lab':'The Factory · Earth';$('flightText').textContent=destination==='lab'?'Launching to the International Alien Lab…':'Returning to The Factory…';flame.visible=location==='earth';}
 function arrive(destination,atHome=false){
  if(cargoFlying)endCargoFlight();
@@ -380,8 +380,50 @@ $('rollBlueprint').onclick=()=>{
 };
 $('closeBlueprint').onclick=()=>$('blueprintDialog').close();
 $('avatarDialog').addEventListener('close',updateHUD);
+function showCheatsShortcut(){
+ $('cheatsButton').hidden=window.location.hash!=='#cheats';
+}
+addEventListener('hashchange',showCheatsShortcut);
+showCheatsShortcut();
+$('cheatsButton').onclick=()=>{
+ if(modalOpen())return;
+ keys.clear();
+ $('cheatStatus').textContent='';
+ $('cheatsDialog').showModal();
+};
+$('closeCheats').onclick=()=>$('cheatsDialog').close();
+$('cheatsForm').onsubmit=event=>{
+ event.preventDefault();
+ const command=$('cheatCommand').value.trim().toLowerCase();
+ const money=command.match(/^\/money=(\d{1,9})$/);
+ let message;
+ if(money){
+  state.money=Number(money[1]);
+  message='Money set to $'+state.money.toLocaleString()+'.';
+ }else if(command==='/heal'){
+  setHealth(100);
+  message='Health restored.';
+ }else if(command==='/fillbag'){
+  let count=state.bag.reduce((total,amount)=>total+amount,0);
+  while(count<capacity(state)){
+   state.bag[count%materials.length]++;
+   count++;
+  }
+  message='Backpack filled with materials.';
+ }else if(command==='/home'){
+  $('cheatsDialog').close();
+  arrive('earth',true);
+  return;
+ }else{
+  $('cheatStatus').textContent='Unknown command or invalid amount. Use whole numbers up to 999,999,999.';
+  return;
+ }
+ updateHUD();
+ persist();
+ $('cheatStatus').textContent=message;
+};
 function pauseGame(){
- if($('pauseMenu').open)return;keys.clear();for(const id of ['instructions','research','shop','alienResearch','dispatch','robuxExtras','avatarDialog','blueprintDialog'])if($(id).open)$(id).close();
+ if($('pauseMenu').open)return;keys.clear();for(const id of ['instructions','research','shop','alienResearch','dispatch','robuxExtras','avatarDialog','blueprintDialog','cheatsDialog'])if($(id).open)$(id).close();
  $('pauseChoices').hidden=false;$('restartChoices').hidden=true;$('pauseError').textContent='';orbit.enabled=false;$('pauseMenu').showModal();
 }
 function resumeGame(){keys.clear();$('pauseMenu').close();orbit.enabled=!flight;}
