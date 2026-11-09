@@ -9,12 +9,25 @@ export const surveySites = [
  {name:'North Quarry',x:46,z:-90,color:0xb2b4a6},
  {name:'Salvage Yard',x:103,z:56,color:0xe2b778}
 ];
+export const cargoLaunch = {x:-16,z:8};
+export const cargoDestinations = [
+ {name:'Copper Ridge',x:56,z:-24},
+ {name:'North Quarry',x:46,z:-74},
+ {name:'Salvage Yard',x:103,z:73}
+];
 // World decoration and lightweight effects; gameplay rules stay in state.js.
 export function buildAdventureWorld({THREE,scene,box,label,player}){
  const animated=[],bursts=[];
  const material=(color,glow=false)=>new THREE.MeshStandardMaterial({color,roughness:.65,emissive:glow?color:0x000000,emissiveIntensity:glow?.5:0});
  function mesh(geometry,color,x,y,z,glow=false){const m=new THREE.Mesh(geometry,material(color,glow));m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;scene.add(m);return m;}
  function ring(x,z,r,color,y=.22){const m=mesh(new THREE.TorusGeometry(r,.08,6,48),color,x,y,z,true);m.rotation.x=-Math.PI/2;return m;}
+ for(const {name,x,z} of cargoDestinations){
+  box(6,.16,6,x,.1,z,0x37536d);
+  ring(x,z,2.4,0x78dcff,.23);
+  label(name.toUpperCase()+' · CARGO',x,2.3,z,'#c2f3ff',.75);
+ }
+ box(6,.16,6,cargoLaunch.x,.1,cargoLaunch.z,0x37536d);
+ label('CARGO LAUNCH',cargoLaunch.x,2.2,cargoLaunch.z,'#c2f3ff',.7);
  // Color-coded industrial campus with lit pathways, planters and loading bays.
  box(24,.07,.15,0,.27,-15.5,0x54eee0);box(24,.07,.15,0,.27,3.5,0xffd66b);
  for(const x of [-11.5,11.5])box(.15,.07,19,x,.27,-6,0x54eee0);
