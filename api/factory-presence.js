@@ -9,7 +9,7 @@ function validPosition(value){
  const {x,z,yaw,zone}=value;
  if(![x,z,yaw].every(Number.isFinite)||Math.abs(yaw)>10)return false;
  if(zone==='lab')return Math.abs(x-1000)<=12&&Math.abs(z)<=11;
- return zone==='earth'&&Math.abs(x)<=90&&z>=-70&&z<=95;
+ return zone==='earth'&&Math.abs(x)<=135&&z>=-110&&z<=140;
 }
 
 module.exports=async function handler(req,res){
@@ -22,7 +22,8 @@ module.exports=async function handler(req,res){
  }
  if(!validPosition(input))return res.status(400).json({error:'Invalid position'});
  const {id,x,z,yaw,zone}=input;
- const player={id,x,z,yaw,zone,seen:Date.now()};
+ const skin=typeof input.skin==='string'&&input.skin.length<300&&/^https:\/\/[a-z0-9-]+\.rbxcdn\.com\//i.test(input.skin)?input.skin:'';
+ const player={id,x,z,yaw,zone,skin,seen:Date.now()};
  try{
   const active=(await Promise.all(slots.map(key=>cache.get(key))))
    .map(value=>validPosition(value)&&Number.isFinite(value.seen)&&player.seen-value.seen<lifetime*1000?value:null);
@@ -37,7 +38,7 @@ module.exports=async function handler(req,res){
   if(slot===-1)return res.status(503).json({error:'World is full'});
   await cache.set(slots[slot],player,{ttl:lifetime});
   const peers=active.filter(value=>value&&value.id!==id&&value.zone===zone)
-   .map(({id,x,z,yaw,zone})=>({id,x,z,yaw,zone}));
+   .map(({id,x,z,yaw,zone,skin})=>({id,x,z,yaw,zone,skin}));
   return res.status(200).json({peers});
  }catch{
   return res.status(503).json({error:'World unavailable'});

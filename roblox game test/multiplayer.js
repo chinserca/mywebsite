@@ -1,3 +1,4 @@
+import {attachAvatar} from './avatar.js';
 const playerId = crypto.randomUUID();
 const expiryMs = 12000;
 
@@ -12,6 +13,7 @@ export function connectWorld({THREE,scene,label,status,readPosition,labX,bounds}
   const peer=peers.get(id);
   if(!peer)return;
   scene.remove(peer.avatar,peer.sign);
+  peer.appearance.dispose();
   peer.sign.material.map.dispose();
   peer.sign.material.dispose();
   peers.delete(id);
@@ -33,11 +35,12 @@ export function connectWorld({THREE,scene,label,status,readPosition,labX,bounds}
     mesh.scale.set(w,h,d);mesh.position.set(px,py,0);avatar.add(mesh);
    }
    scene.add(avatar);
-   peer={avatar,sign:label('PLAYER '+id.slice(0,4).toUpperCase(),x,2.95,z,'#dfd3ff',.46),zone};
+   peer={avatar,appearance:attachAvatar(THREE,avatar,[...avatar.children]),sign:label('PLAYER '+id.slice(0,4).toUpperCase(),x,2.95,z,'#dfd3ff',.46),zone};
    avatar.position.set(x,0,z);
    peers.set(id,peer);
   }
   if(peer.zone!==zone||Math.hypot(x-peer.avatar.position.x,z-peer.avatar.position.z)>16)peer.avatar.position.set(x,0,z);
+  peer.appearance.set(payload.skin);
   Object.assign(peer,{x,z,yaw,zone,seen:performance.now()});
  }
  async function sync(local){
@@ -51,6 +54,8 @@ export function connectWorld({THREE,scene,label,status,readPosition,labX,bounds}
    const {peers:players}=await response.json();
    if(!Array.isArray(players))throw new Error('Invalid world response');
    online=true;
+   const received=new Set(players.map(player=>player.id));
+   for(const [id,peer] of peers)if(peer.zone===local.zone&&!received.has(id))remove(id);
    for(const payload of players)receive({payload});
   }catch{
    online=false;
@@ -68,6 +73,7 @@ export function connectWorld({THREE,scene,label,status,readPosition,labX,bounds}
    peer.avatar.visible=peer.sign.visible=visible;
    if(!visible)continue;
    nearby++;
+   peer.appearance.walk(Math.min(1,Math.hypot(peer.x-peer.avatar.position.x,peer.z-peer.avatar.position.z))*Math.sin(now*.013));
    const mix=1-Math.exp(-dt*15);
    peer.avatar.position.x+=(peer.x-peer.avatar.position.x)*mix;
    peer.avatar.position.z+=(peer.z-peer.avatar.position.z)*mix;

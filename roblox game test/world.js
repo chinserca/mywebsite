@@ -1,9 +1,11 @@
 export const LAB_X = 1000;
-export const EARTH_BOUNDS = {minX:-90,maxX:90,minZ:-70,maxZ:95};
+export const EARTH_BOUNDS = {minX:-135,maxX:135,minZ:-110,maxZ:140};
 export const surveySites = [
  {name:'Copper Ridge',x:64,z:-36,color:0xf1a45f},
  {name:'Pine Basin',x:-66,z:-23,color:0x76dfab},
- {name:'Crystal Flats',x:11,z:77,color:0x96bbff}
+ {name:'Crystal Flats',x:11,z:77,color:0x96bbff},
+ {name:'North Quarry',x:46,z:-90,color:0xb2b4a6},
+ {name:'Salvage Yard',x:103,z:56,color:0xe2b778}
 ];
 // World decoration and lightweight effects; gameplay rules stay in state.js.
 export function buildAdventureWorld({THREE,scene,box,label,player}){
@@ -33,7 +35,7 @@ export function buildAdventureWorld({THREE,scene,box,label,player}){
  for(const [x,z] of [[-4,8],[4,8],[-4,25],[4,25],[21,7],[28,7]]){box(.15,2.8,.15,x,1.4,z,0x405c68);mesh(new THREE.SphereGeometry(.26,10,8),0xffdf8b,x,2.9,z,true);}
  for(const [i,site] of surveySites.entries()){
   const {x,z,color}=site;
-  box(24,.16,22,x,.04,z,[0xa66b48,0x4d865f,0x638f99][i]);
+  box(24,.16,22,x,.04,z,[0xa66b48,0x4d865f,0x638f99,0x727970,0x87704e][i]);
   box(4,.2,4,x,.23,z,color);
   ring(x,z,1.7,color,.36);
   label(site.name.toUpperCase()+' · SURVEY',x,2.5,z,'#e5fffa',.95);
@@ -43,6 +45,19 @@ export function buildAdventureWorld({THREE,scene,box,label,player}){
    rock.scale.y=1.2+(j%3)*.35;
   }
   for(let j=0;j<5;j++)box(1.7,.04,.8,x,.15,z+4+j*2,0xd5e3bb);
+ }
+ box(4,.2,4,103,.24,64,0xdeaa57);
+ label('PICK UP SALVAGE',103,2.2,64,'#ffe3ad',.8);
+ for(const x of [97,109]){
+  box(2.4,1.4,3,x,.7,65,0x495767,true);
+  for(const dx of [-.65,0,.65])box(.15,1.44,3.1,x+dx,.72,65,0x9d7b4e);
+ }
+ // Sloped foothills beyond the survey routes give the horizon depth.
+ for(let i=0;i<24;i++){
+  const x=-127+i*11,z=-106+i%3*3;
+  const hill=mesh(new THREE.IcosahedronGeometry(1,1),[0x65766a,0x75816f,0x697d73][i%3],x,-1,z);
+  hill.scale.set(12+i%5,8+i%7,7+i%3);
+  hill.rotation.y=i*1.8;
  }
  box(4,.2,4,69,.24,-30,0xcb8c59);
  label('MINE METAL · 2 SPOOLS',69,2.2,-30,'#ffe3ad',.75);
