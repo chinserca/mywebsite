@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><title>The Factory — Play</title><link rel="stylesheet" href="style.css"></head><body>
-<audio id="factoryMusic" src="factory-after-hours.mp3" preload="none" loop></audio><div id="world"></div><div class="zoom-controls" role="group" aria-label="Camera zoom"><button id="zoomIn" aria-label="Zoom in" title="Zoom in (+)">+</button><span>ZOOM</span><button id="zoomOut" aria-label="Zoom out" title="Zoom out (-)">−</button></div><div id="reticle" hidden aria-hidden="true">+</div><header><a href="../index.html">← AC</a><strong>THE FACTORY<small>EARTH / ORBIT</small></strong><button id="mission">Guide: Materials</button><button id="netToggle" hidden>Equip net</button><button id="lockMouse">Lock mouse</button><button id="resetCamera">Reset camera</button><button id="pauseButton">Pause · Esc</button><button id="robuxExtrasButton">Roblox extras</button><button id="cargoToggle">Cargo</button><button id="avatarButton">Avatar</button><button id="soundToggle" aria-pressed="false">Sound: Off</button><button id="cheatsButton" hidden>Cheats</button><button id="help">How to play</button></header>
+<audio id="factoryMusic" src="factory-after-hours.mp3" preload="none" loop></audio><div id="world"></div><div class="zoom-controls" role="group" aria-label="Camera zoom"><button id="zoomIn" aria-label="Zoom in" title="Zoom in (+)">+</button><span>ZOOM</span><button id="zoomOut" aria-label="Zoom out" title="Zoom out (-)">−</button></div><div id="reticle" hidden aria-hidden="true">+</div><header><a href="../index.html">← AC</a><strong>THE FACTORY<small>EARTH / ORBIT</small></strong><button id="mission">Guide: Materials</button><button id="netToggle" hidden>Equip net</button><button id="lockMouse">Lock mouse</button><button id="resetCamera">Reset camera</button><button id="pauseButton">Pause · Esc</button><button id="robuxExtrasButton">Roblox extras</button><button id="cargoToggle">Cargo</button><button id="avatarButton">Avatar</button><button id="soundToggle" aria-pressed="false">Sound: Off</button><button id="help">How to play</button></header>
 <section class="objective"><small>YOUR NEXT ADVENTURE</small><h1 id="objective">Claim your factory</h1><p>Follow the blue arrow</p></section>
 <div id="toast" role="status" aria-live="polite">Welcome! Walk onto the yellow Claim Factory pad.</div>
 <section class="wallet"><small>YOUR MONEY</small><strong id="money">$1,000</strong><span id="location">Material Yard · Earth</span><span id="career"></span><span id="playerUsername" hidden></span><span id="worldStatus">Solo · Connecting…</span><button id="teleportHome">Teleport to factory</button><label class="health">Health <progress id="health" value="100" max="100"></progress><span id="healthValue">100 / 100</span></label><span id="bag">Backpack · 0 / 8</span></section>
@@ -19,9 +19,9 @@
 <h2 id="cheatsTitle">Cheats</h2>
 <form id="cheatsForm">
 <label for="cheatCommand">Command</label>
-<input id="cheatCommand" placeholder="/money=10000" maxlength="32" autocomplete="off" autocapitalize="none" required>
+<input id="cheatCommand" maxlength="32" autocomplete="off" autocapitalize="none" required>
 <button type="submit">Run</button>
 </form>
 <p id="cheatStatus" role="status"></p>
 <button id="closeCheats">Back to game</button>
-</dialog><script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script><script type="module" src="game.js?v=cheats"></script></body></html>
+</dialog><script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script><script type="module" src="game.js?v=cheat-key"></script></body></html>

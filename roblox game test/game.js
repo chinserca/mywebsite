@@ -380,17 +380,13 @@ $('rollBlueprint').onclick=()=>{
 };
 $('closeBlueprint').onclick=()=>$('blueprintDialog').close();
 $('avatarDialog').addEventListener('close',updateHUD);
-function showCheatsShortcut(){
- $('cheatsButton').hidden=window.location.hash!=='#cheats';
-}
-addEventListener('hashchange',showCheatsShortcut);
-showCheatsShortcut();
-$('cheatsButton').onclick=()=>{
- if(modalOpen())return;
+function openCheats(){
  keys.clear();
+ $('cheatCommand').value='';
  $('cheatStatus').textContent='';
  $('cheatsDialog').showModal();
-};
+ $('cheatCommand').focus();
+}
 $('closeCheats').onclick=()=>$('cheatsDialog').close();
 $('cheatsForm').onsubmit=event=>{
  event.preventDefault();
@@ -415,7 +411,7 @@ $('cheatsForm').onsubmit=event=>{
   arrive('earth',true);
   return;
  }else{
-  $('cheatStatus').textContent='Unknown command or invalid amount. Use whole numbers up to 999,999,999.';
+  $('cheatStatus').textContent='Unknown command or invalid amount.';
   return;
  }
  updateHUD();
@@ -440,6 +436,12 @@ $('interact').onclick=()=>interact();$('help').onclick=()=>{$('instructions').sh
 $('instructions').addEventListener('close',()=> $('tutorialVideo').pause());
 addEventListener('keydown',e=>{
  if(e.defaultPrevented||e.ctrlKey||e.metaKey||e.altKey)return;
+ if(e.key==='/'&&!e.repeat&&!modalOpen()&&
+    !(e.target instanceof HTMLElement&&e.target.closest('input,textarea,select,[contenteditable]'))){
+  e.preventDefault();
+  openCheats();
+  return;
+ }
  if(e.code==='Space'&&e.target instanceof HTMLElement&&e.target.closest('button,a,input,select,textarea,[contenteditable]'))return;
  if(e.code==='KeyQ'&&!modalOpen()){e.preventDefault();if(!e.repeat)stunPulse();return;}if(['+','=','-','_'].includes(e.key)&&!modalOpen()){e.preventDefault();zoomCamera(e.key==='+'||e.key==='='?.8:1.25);return;}if(e.code==='Space'&&!modalOpen()){e.preventDefault();if(!e.repeat)sprint();return;}if(e.key==='Escape'){e.preventDefault();if(!e.repeat){if($('pauseMenu').open)resumeGame();else pauseGame();}return;}if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d','W','A','S','D','e','E'].includes(e.key)&&!modalOpen()){e.preventDefault();keys.add(e.key.toLowerCase());if(e.key.toLowerCase()==='e'&&!e.repeat)interact();}});addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));addEventListener('blur',()=>keys.clear());document.addEventListener('visibilitychange',()=>keys.clear());
 for(const button of document.querySelectorAll('[data-move]')){button.onpointerdown=e=>{e.preventDefault();button.setPointerCapture(e.pointerId);keys.add(button.dataset.move.toLowerCase());};for(const event of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(event,()=>keys.delete(button.dataset.move.toLowerCase()));}
