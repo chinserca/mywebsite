@@ -40,6 +40,7 @@ export function buildAdventureWorld({THREE,scene,box,label,player}){
   ring(x,z,1.7,color,.36);
   label(site.name.toUpperCase()+' · SURVEY',x,2.5,z,'#e5fffa',.95);
   for(let j=0;j<8;j++){
+   if(site.name==='Salvage Yard'&&j>=1&&j<=3)continue;
    const angle=j*Math.PI/4;
    const rock=mesh(new THREE.IcosahedronGeometry(1.5+j%3*.4,0),color,x+Math.cos(angle)*10,1.3,z+Math.sin(angle)*9);
    rock.scale.y=1.2+(j%3)*.35;

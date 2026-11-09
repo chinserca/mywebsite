@@ -1,10 +1,10 @@
-import {connectWorld} from './multiplayer.js?v=frontier';
+import {connectWorld} from './multiplayer.js?v=frontier2';
 import {attachAvatar,setupAvatar} from './avatar.js';
 import * as THREE from 'three';
-import {buildAdventureWorld, LAB_X, EARTH_BOUNDS, surveySites} from './world.js?v=frontier';
+import {buildAdventureWorld, LAB_X, EARTH_BOUNDS, surveySites} from './world.js?v=frontier2';
 import {setupMouseLock} from './mouse-lock.js';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
-import {materials,newState,validState,act,materialValue,capacity,shopItems,alienTypes,orders,orderValue} from './state.js?v=frontier';
+import {materials,newState,validState,act,materialValue,capacity,shopItems,alienTypes,orders,orderValue} from './state.js?v=frontier2';
 const $=id=>document.getElementById(id),saveKey='the-factory-v1';let state=newState();
 try{const saved=JSON.parse(localStorage.getItem(saveKey));if(validState(saved))state={...newState(),...saved,upgrades:{...newState().upgrades,...saved.upgrades},studied:saved.studied??materials.map(()=>false)};}catch{}
 const scene=new THREE.Scene();scene.background=new THREE.Color(0xa9d7ee);scene.fog=new THREE.Fog(0xa9d7ee,45,110);
