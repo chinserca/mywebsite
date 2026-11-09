@@ -220,6 +220,7 @@ function zoomCamera(factor){if(modalOpen())return;const offset=camera.position.c
 $('zoomIn').onclick=()=>zoomCamera(.8);$('zoomOut').onclick=()=>zoomCamera(1.25);
 $('resetCamera').onclick=()=>{orbit.target.copy(player.position).add(new THREE.Vector3(0,1,0));camera.position.copy(player.position).add(new THREE.Vector3(0,18,19));orbit.update();};
 $('interact').onclick=()=>interact();$('help').onclick=()=>{$('instructions').showModal();keys.clear();};$('closeHelp').onclick=()=>$('instructions').close();
+$('instructions').addEventListener('close',()=> $('tutorialVideo').pause());
 addEventListener('keydown',e=>{
  if(e.defaultPrevented||e.ctrlKey||e.metaKey||e.altKey)return;
  if(e.code==='Space'&&e.target instanceof HTMLElement&&e.target.closest('button,a,input,select,textarea,[contenteditable]'))return;
