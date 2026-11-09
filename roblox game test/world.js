@@ -1,3 +1,10 @@
+export const LAB_X = 1000;
+export const EARTH_BOUNDS = {minX:-90,maxX:90,minZ:-70,maxZ:95};
+export const surveySites = [
+ {name:'Copper Ridge',x:64,z:-36,color:0xf1a45f},
+ {name:'Pine Basin',x:-66,z:-23,color:0x76dfab},
+ {name:'Crystal Flats',x:11,z:77,color:0x96bbff}
+];
 // World decoration and lightweight effects; gameplay rules stay in state.js.
 export function buildAdventureWorld({THREE,scene,box,label,player}){
  const animated=[],bursts=[];
@@ -24,17 +31,38 @@ export function buildAdventureWorld({THREE,scene,box,label,player}){
   const crown=mesh(new THREE.IcosahedronGeometry(1.6+(i%3)*.3,0),[0x5c9a79,0x72b18a,0x4b8b73][i%3],x,2.8,z);box(.28,2,.28,x,1,z,0x886646);crown.rotation.y=i;}
  for(let i=0;i<40;i++){const x=(i%2?-1:1)*(13+(i*7%17)),z=8+(i*11%25);mesh(new THREE.IcosahedronGeometry(.18,0),[0xffd66b,0xf395b8,0x9edbff][i%3],x,.35,z);}
  for(const [x,z] of [[-4,8],[4,8],[-4,25],[4,25],[21,7],[28,7]]){box(.15,2.8,.15,x,1.4,z,0x405c68);mesh(new THREE.SphereGeometry(.26,10,8),0xffdf8b,x,2.9,z,true);}
+ for(const [i,site] of surveySites.entries()){
+  const {x,z,color}=site;
+  box(24,.16,22,x,.04,z,[0xa66b48,0x4d865f,0x638f99][i]);
+  box(4,.2,4,x,.23,z,color);
+  ring(x,z,1.7,color,.36);
+  label(site.name.toUpperCase()+' · SURVEY',x,2.5,z,'#e5fffa',.95);
+  for(let j=0;j<8;j++){
+   const angle=j*Math.PI/4;
+   const rock=mesh(new THREE.IcosahedronGeometry(1.5+j%3*.4,0),color,x+Math.cos(angle)*10,1.3,z+Math.sin(angle)*9);
+   rock.scale.y=1.2+(j%3)*.35;
+  }
+  for(let j=0;j<5;j++)box(1.7,.04,.8,x,.15,z+4+j*2,0xd5e3bb);
+ }
+ box(4,.2,4,69,.24,-30,0xcb8c59);
+ label('MINE METAL · 2 SPOOLS',69,2.2,-30,'#ffe3ad',.75);
+ for(const [x,z,color] of [[34,-22,0x905e4e],[-34,-15,0x52775a],[5,50,0x587b86]]){
+  for(let i=0;i<11;i++){
+   const ridge=mesh(new THREE.ConeGeometry(3+i%3,5+i%4,5),color,x+i*3-15,2.5,z+i%2*4);
+   ridge.rotation.y=i;
+  }
+ }
  // Slow steam puffs make the factory feel alive.
  for(const x of [-9,9]){box(1.2,2,1.2,x,5,-15,0x3a5264);for(let i=0;i<3;i++){const puff=mesh(new THREE.IcosahedronGeometry(.7,1),0xffffff,x,7+i,-15);puff.material.transparent=true;puff.material.opacity=.4;animated.push({kind:'steam',m:puff,x,offset:i});}}
  // A sky full of small clouds, beyond the playable campus.
  for(let i=0;i<7;i++){const group=new THREE.Group();group.position.set(-38+i*13,17+i%3*2,-27-i%2*9);for(let j=0;j<3;j++){const cloud=new THREE.Mesh(new THREE.IcosahedronGeometry(2.4-j*.3,1),material(0xfff4e1));cloud.position.set(j*2.3,Math.sin(j)*.8,0);cloud.scale.set(1.6,.7,1);group.add(cloud);}scene.add(group);}
  // Space-lab glass, glowing floor strips, observation planet and stars.
- for(const x of [89,111])box(.12,.08,20,x,.22,0,0x6cf9d9);
- for(let z=-9;z<10;z+=3)box(21,.03,.06,100,.21,z,0x4e7e9c);
- for(const x of [92,108]){ring(x,-6,1.2,0x6bfbd7);const specimen=mesh(new THREE.IcosahedronGeometry(.65,1),x===92?0xc1a0ff:0x81ffc8,x,1.8,-6,true);animated.push({kind:'specimen',m:specimen});}
- const planet=mesh(new THREE.IcosahedronGeometry(5,3),0x327db5,100,9,-29);const land=mesh(new THREE.IcosahedronGeometry(5.04,1),0x6bc9a5,100,9,-29);land.scale.set(.6,1,.97);animated.push({kind:'planet',m:planet},{kind:'planet',m:land});
- const stars=new THREE.BufferGeometry();const starPositions=[];for(let i=0;i<170;i++){const a=i*2.399963,r=22+i%18;starPositions.push(100+Math.cos(a)*r,7+i%23,Math.sin(a)*r);}stars.setAttribute('position',new THREE.Float32BufferAttribute(starPositions,3));scene.add(new THREE.Points(stars,new THREE.PointsMaterial({color:0xc6f5ff,size:.14,sizeAttenuation:true})));
- const crystalPositions=[[-18,7,'earth'],[29,-12,'earth'],[-26,28,'earth'],[10,33,'earth'],[-29,-1,'earth'],[91,7,'lab'],[109,2,'lab'],[105,-8,'lab']];
+ for(const x of [LAB_X-11,LAB_X+11])box(.12,.08,20,x,.22,0,0x6cf9d9);
+ for(let z=-9;z<10;z+=3)box(21,.03,.06,LAB_X,.21,z,0x4e7e9c);
+ for(const x of [LAB_X-8,LAB_X+8]){ring(x,-6,1.2,0x6bfbd7);const specimen=mesh(new THREE.IcosahedronGeometry(.65,1),x===LAB_X-8?0xc1a0ff:0x81ffc8,x,1.8,-6,true);animated.push({kind:'specimen',m:specimen});}
+ const planet=mesh(new THREE.IcosahedronGeometry(5,3),0x327db5,LAB_X,9,-29);const land=mesh(new THREE.IcosahedronGeometry(5.04,1),0x6bc9a5,LAB_X,9,-29);land.scale.set(.6,1,.97);animated.push({kind:'planet',m:planet},{kind:'planet',m:land});
+ const stars=new THREE.BufferGeometry();const starPositions=[];for(let i=0;i<170;i++){const a=i*2.399963,r=22+i%18;starPositions.push(LAB_X+Math.cos(a)*r,7+i%23,Math.sin(a)*r);}stars.setAttribute('position',new THREE.Float32BufferAttribute(starPositions,3));scene.add(new THREE.Points(stars,new THREE.PointsMaterial({color:0xc6f5ff,size:.14,sizeAttenuation:true})));
+ const crystalPositions=[[-18,7,'earth'],[29,-12,'earth'],[-26,28,'earth'],[10,33,'earth'],[-29,-1,'earth'],[LAB_X-9,7,'lab'],[LAB_X+9,2,'lab'],[LAB_X+5,-8,'lab']];
  const crystals=crystalPositions.map(([x,z,region],id)=>{const m=mesh(new THREE.OctahedronGeometry(.55,0),region==='earth'?0x71ffe1:0xe4a7ff,x,1.1,z,true);const marker=ring(x,z,.8,region==='earth'?0x71ffe1:0xe4a7ff);return {id,x,z,region,m,marker};});
  // Companion's body and eyes follow the player; owned through the upgrade shop.
  const drone=new THREE.Group();scene.add(drone);for(const [geo,color,x,y,z] of [[new THREE.SphereGeometry(.4,12,8),0xffd364,0,0,0],[new THREE.BoxGeometry(.5,.2,.15),0x203b54,0,0,.35],[new THREE.BoxGeometry(.15,.1,.17),0x8bffeb,-.15,0,.44],[new THREE.BoxGeometry(.15,.1,.17),0x8bffeb,.15,0,.44]]){const m=new THREE.Mesh(geo,material(color));m.position.set(x,y,z);drone.add(m);}

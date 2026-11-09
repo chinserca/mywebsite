@@ -30,3 +30,5 @@
 
 #instructions{width:min(720px,calc(100% - 32px));max-width:720px;max-height:calc(100dvh - 32px);overflow:auto}
 #tutorialVideo{display:block;width:100%;aspect-ratio:16/9;border-radius:12px;background:#091c2d}
+
+#teleportHome{margin-top:5px;padding:8px 10px;border-radius:8px;background:#8df7d8;color:#133549;font-size:11px}#worldStatus{font-size:11px;color:#a5e7e1}

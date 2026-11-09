@@ -1,8 +1,9 @@
+import {connectWorld} from './multiplayer.js';
 import * as THREE from 'three';
-import {buildAdventureWorld} from './world.js?v=clear-launch-pad';
+import {buildAdventureWorld, LAB_X, EARTH_BOUNDS, surveySites} from './world.js?v=expedition';
 import {setupMouseLock} from './mouse-lock.js';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
-import {materials,newState,validState,act,materialValue,capacity,shopItems,alienTypes,orders,orderValue} from './state.js';
+import {materials,newState,validState,act,materialValue,capacity,shopItems,alienTypes,orders,orderValue} from './state.js?v=expedition';
 const $=id=>document.getElementById(id),saveKey='the-factory-v1';let state=newState();
 try{const saved=JSON.parse(localStorage.getItem(saveKey));if(validState(saved))state={...newState(),...saved,upgrades:{...newState().upgrades,...saved.upgrades},studied:saved.studied??materials.map(()=>false)};}catch{}
 const scene=new THREE.Scene();scene.background=new THREE.Color(0xa9d7ee);scene.fog=new THREE.Fog(0xa9d7ee,45,110);
@@ -17,7 +18,7 @@ orbit.enableDamping=true;orbit.enablePan=false;orbit.minDistance=7;orbit.maxDist
 const colliders=[];
 function box(w,h,d,x,y,z,color,solid=false){const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({color,roughness:.75}));mesh.position.set(x,y,z);mesh.castShadow=true;mesh.receiveShadow=true;scene.add(mesh);if(solid)colliders.push({x,z,w,d});return mesh;}
 function label(text,x,y,z,color='#ffffff',size=1){const canvas=document.createElement('canvas');canvas.width=1024;canvas.height=160;const ctx=canvas.getContext('2d');ctx.fillStyle='#172c40';ctx.beginPath();ctx.roundRect(0,0,1024,160,22);ctx.fill();ctx.fillStyle=color;ctx.font='bold 65px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,512,83);const map=new THREE.CanvasTexture(canvas);const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map,depthTest:true}));sprite.position.set(x,y,z);sprite.scale.set(6.4*size,1*size,1);scene.add(sprite);return sprite;}
-box(90,.3,90,0,-.2,0,0x7fa36a);box(24,.3,20,0,.05,-6,0xc1c9cc);box(8,.08,20,0,.02,15,0xaaa89e);
+box(190,.3,178,0,-.2,12.5,0x7fa36a);box(24,.3,20,0,.05,-6,0xc1c9cc);box(8,.08,20,0,.02,15,0xaaa89e);
 // Open front entrance; walls keep the player within the factory footprint.
 box(24,4,.5,0,2,-16,0x6e8899,true);box(.5,4,20,-12,2,-6,0x6e8899,true);box(.5,4,20,12,2,-6,0x6e8899,true);box(7,3.5,.5,-8.5,1.75,4,0x6e8899,true);box(7,3.5,.5,8.5,1.75,4,0x6e8899,true);
 for(const x of [-11.7,11.7])for(const z of [-15,3])box(.8,6,.8,x,3,z,0x344f63);
@@ -45,8 +46,8 @@ rocketPart(new THREE.CylinderGeometry(1,1,4,24),0xe8f1fa,3);rocketPart(new THREE
 for(const x of [-1,1]){const fin=rocketPart(new THREE.BoxGeometry(.25,1.8,1.8),0x4188cc,1.5);fin.position.x=x;}
 const netStand=box(2,.2,2,19,.15,26,0x43b1bd);const netSign=label('FREE ALIEN NET',19,2,26,'#9fffee',.65);
 const aliens=[];alienTypes.forEach((type,i)=>{const group=new THREE.Group();const x=[-18,4,18][i],z=[28,29,17][i];group.position.set(x,.8,z);scene.add(group);const body=new THREE.Mesh(new THREE.SphereGeometry(.6,16,12),new THREE.MeshStandardMaterial({color:type.color}));body.scale.y=1.2;group.add(body);for(const eyeX of [-.22,.22]){const eye=new THREE.Mesh(new THREE.SphereGeometry(.16,12,8),new THREE.MeshStandardMaterial({color:0x182738}));eye.position.set(eyeX,.2,.5);group.add(eye);}const sign=label(type.name,x,2.3,z,'#d5ffde',.5);aliens.push({group,body,sign,x,z,homeX:x,homeZ:z,available:true,next:0,windup:0,attackReady:0,stunnedUntil:0});});
-box(24,.3,22,100,0,0,0x9caec5);box(24,4,.5,100,2,-11,0x35435f,true);box(.5,3,22,88,1.5,0,0x35435f,true);box(.5,3,22,112,1.5,0,0x35435f,true);label('INTERNATIONAL ALIEN LAB',100,5,-10,'#8fffe6',1.3);box(4,1.2,2,100,.8,-5,0x3d8192,true);box(3,.12,1.8,100,1.5,-5,0x82e6ed);label('STUDY ALIENS',100,3.2,-5,'#afffe7',.75);box(4,.15,3,100,.3,8,0x73b3ff);label('RETURN TO FACTORY',100,1.5,8,'#cce5ff',.65);
-for(const x of [92,108]){const tank=new THREE.Mesh(new THREE.CylinderGeometry(1,1,3,20),new THREE.MeshStandardMaterial({color:0x74edc2,transparent:true,opacity:.45}));tank.position.set(x,1.8,-6);scene.add(tank);}
+box(24,.3,22,LAB_X,0,0,0x9caec5);box(24,4,.5,LAB_X,2,-11,0x35435f,true);box(.5,3,22,LAB_X-12,1.5,0,0x35435f,true);box(.5,3,22,LAB_X+12,1.5,0,0x35435f,true);label('INTERNATIONAL ALIEN LAB',LAB_X,5,-10,'#8fffe6',1.3);box(4,1.2,2,LAB_X,.8,-5,0x3d8192,true);box(3,.12,1.8,LAB_X,1.5,-5,0x82e6ed);label('STUDY ALIENS',LAB_X,3.2,-5,'#afffe7',.75);box(4,.15,3,LAB_X,.3,8,0x73b3ff);label('RETURN TO FACTORY',LAB_X,1.5,8,'#cce5ff',.65);
+for(const x of [LAB_X-8,LAB_X+8]){const tank=new THREE.Mesh(new THREE.CylinderGeometry(1,1,3,20),new THREE.MeshStandardMaterial({color:0x74edc2,transparent:true,opacity:.45}));tank.position.set(x,1.8,-6);scene.add(tank);}
 let location='earth',netEquipped=false,guide='Materials',flight=null;
 const player=new THREE.Group();player.position.set(0,0,9);scene.add(player);
 function body(w,h,d,x,y,z,color){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({color}));m.position.set(x,y,z);m.castShadow=true;player.add(m);return m;}
@@ -141,27 +142,48 @@ function updateAliens(now,dt){
 const keys=new Set();let nearby=null,last=performance.now(),gameNow=last,notice=0,processed=[],sprintUntil=0,sprintReady=0;
 function notify(message){$('toast').textContent=message;$('toast').style.opacity=1;notice=gameNow+6500;}
 function persist(){try{localStorage.setItem(saveKey,JSON.stringify(state));}catch{notify('Progress cannot be saved in this browser. Keep this tab open to continue.');}}
+function atFactory(){
+ const {x,z}=player.position;
+ return location==='earth'&&Math.abs(x)<12&&z>=-16&&z<=6;
+}
 function updateHUD(){
  rocketPurchaseLabel.visible=!state.rocket;
  rocketLaunchLabel.visible=state.rocket;
- $('career').textContent=state.deliveries+' deliveries · '+state.crystals.length+'/8 crystals';
+ $('career').textContent=state.deliveries+' deliveries · '+state.crystals.length+'/8 crystals · '+state.surveys.length+'/3 outposts';
  $('location').textContent=location==='earth'?'The Factory · Earth':'International Alien Lab';$('netToggle').hidden=!state.net;$('netToggle').textContent=netEquipped?'Put net away':'Equip net';handNet.visible=netEquipped;netStand.visible=!state.net;netSign.visible=!state.net;$('alienCount').textContent=state.aliens.reduce((a,b)=>a+b,0)+' / 6';$('alienInventory').replaceChildren();alienTypes.forEach((a,i)=>{const row=document.createElement('div');row.textContent=a.name+' × '+state.aliens[i]+' · Studied '+state.alienStudies[i];$('alienInventory').append(row);});
- $('money').textContent=state.money.toLocaleString('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0});const total=state.bag.reduce((a,b)=>a+b,0);$('bag').textContent='Backpack · '+total+' / '+capacity(state);$('materials').replaceChildren();materials.forEach((m,i)=>{const row=document.createElement('div');row.textContent=m.name+' × '+state.bag[i]+' · $'+materialValue(state,i)+(state.studied[i]?' ★':'');$('materials').append(row);});claim.visible=!state.claimed;claimLabel.visible=!state.claimed;purchase.visible=state.claimed&&!state.conveyor;purchaseLabel.visible=purchase.visible;conveyor.visible=state.conveyor;$('objective').textContent=guide==='Crystals'?(state.crystals.length===adventure.crystals.length?'All energy crystals found':'Find energy crystals · '+state.crystals.length+'/8'):guide==='Deliveries'&&state.conveyor?'Ship materials at the dispatch desk':location==='lab'?(state.aliens.some(n=>n)?'Study your captured aliens':'Return to the material yard'):guide==='Aliens'&&state.conveyor?(!state.net?'Collect the alien net':state.aliens.some(n=>n)?state.rocket?'Ride rocket to alien lab':'Save $1,000 for the rocket':'Equip net and catch aliens'):!state.claimed?'Claim your factory':!state.conveyor?'Buy a conveyor · $500':total?'Put materials in the funnel':'Collect materials outside';
+ $('money').textContent=state.money.toLocaleString('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0});const total=state.bag.reduce((a,b)=>a+b,0);$('bag').textContent='Backpack · '+total+' / '+capacity(state);$('materials').replaceChildren();materials.forEach((m,i)=>{const row=document.createElement('div');row.textContent=m.name+' × '+state.bag[i]+' · $'+materialValue(state,i)+(state.studied[i]?' ★':'');$('materials').append(row);});claim.visible=!state.claimed;claimLabel.visible=!state.claimed;purchase.visible=state.claimed&&!state.conveyor;purchaseLabel.visible=purchase.visible;conveyor.visible=state.conveyor;$('objective').textContent=guide==='Expedition'&&state.conveyor?(state.surveys.length===surveySites.length?'All outposts surveyed · Try mining':'Survey outposts · '+state.surveys.length+'/3'):guide==='Crystals'?(state.crystals.length===adventure.crystals.length?'All energy crystals found':'Find energy crystals · '+state.crystals.length+'/8'):guide==='Deliveries'&&state.conveyor?'Ship materials at the dispatch desk':location==='lab'?(state.aliens.some(n=>n)?'Study your captured aliens':'Return to the material yard'):guide==='Aliens'&&state.conveyor?(!state.net?'Collect the alien net':state.aliens.some(n=>n)?state.rocket?'Ride rocket to alien lab':'Save $1,000 for the rocket':'Equip net and catch aliens'):!state.claimed?'Claim your factory':!state.conveyor?'Buy a conveyor · $500':total?'Put materials in the funnel':'Collect materials outside';
 }
-function target(){if(guide==='Crystals'){if(state.crystals.length===adventure.crystals.length)return null;const candidates=adventure.crystals.filter(c=>!state.crystals.includes(c.id)&&c.region===location);return candidates.sort((a,b)=>Math.hypot(a.x-player.position.x,a.z-player.position.z)-Math.hypot(b.x-player.position.x,b.z-player.position.z))[0]??(location==='lab'?{x:100,z:8}:{x:25,z:4});}if(guide==='Deliveries'&&state.conveyor)return location==='lab'?{x:100,z:8}:{x:-7,z:-1};if(location==='lab')return state.aliens.some(n=>n)?{x:100,z:-3}:{x:100,z:8};if(guide==='Aliens'&&state.conveyor){if(!state.net)return {x:19,z:26};if(state.aliens.some(n=>n))return {x:25,z:4};return aliens.filter(a=>a.available).sort((a,b)=>Math.hypot(a.x-player.position.x,a.z-player.position.z)-Math.hypot(b.x-player.position.x,b.z-player.position.z))[0];}if(!state.claimed)return {x:0,z:1};if(!state.conveyor)return {x:-6,z:-4};if(state.bag.some(n=>n))return {x:0,z:-1};return spools.filter(s=>s.available).sort((a,b)=>Math.hypot(a.x-player.position.x,a.z-player.position.z)-Math.hypot(b.x-player.position.x,b.z-player.position.z))[0];}
-function interact(nearbyAction=nearby){const nearby=nearbyAction;if(!nearby||modalOpen())return;if(nearby.action==='heal'){setHealth(100);notify('Health restored.');return;}if(nearby.action==='dispatch'){keys.clear();renderOrders();$('dispatch').showModal();return;}if(nearby.action==='fly'){startFlight('lab');return;}if(nearby.action==='return'){startFlight('earth');return;}if(nearby.action==='alienLab'){keys.clear();renderAlienResearch();$('alienResearch').showModal();return;}if(nearby.action==='shop'){keys.clear();renderShop();$('shop').showModal();return;}if(nearby.action==='research'){keys.clear();renderResearch();$('research').showModal();return;}const result=act(state,nearby.action,nearby.index);if(!result){notify(nearby.action==='buy'?'The conveyor costs $500.':nearby.action==='rocket'?'The rocket costs $1,000. Keep earning money at your factory.':nearby.action==='catch'?'Alien carrier full! Take your aliens to the lab.':'Your backpack is full. Return to the funnel.');return;}if(nearby.action==='net')netEquipped=true;if(nearby.action==='catch'){const alien=aliens[nearby.index];alien.available=false;alien.group.visible=false;alien.next=gameNow+20000;}if(nearby.action==='collect'){const spool=spools[nearby.index];spool.available=false;spool.group.visible=false;spool.next=gameNow+8000;}
+function target(){
+ if(guide==='Expedition'&&state.conveyor){
+  if(location==='lab')return {x:LAB_X,z:8};
+  return surveySites.find((_,i)=>!state.surveys.includes(i))??{x:69,z:-30};
+ }
+if(guide==='Crystals'){if(state.crystals.length===adventure.crystals.length)return null;const candidates=adventure.crystals.filter(c=>!state.crystals.includes(c.id)&&c.region===location);return candidates.sort((a,b)=>Math.hypot(a.x-player.position.x,a.z-player.position.z)-Math.hypot(b.x-player.position.x,b.z-player.position.z))[0]??(location==='lab'?{x:LAB_X,z:8}:{x:25,z:4});}if(guide==='Deliveries'&&state.conveyor)return location==='lab'?{x:LAB_X,z:8}:{x:-7,z:-1};if(location==='lab')return state.aliens.some(n=>n)?{x:LAB_X,z:-3}:{x:LAB_X,z:8};if(guide==='Aliens'&&state.conveyor){if(!state.net)return {x:19,z:26};if(state.aliens.some(n=>n))return {x:25,z:4};return aliens.filter(a=>a.available).sort((a,b)=>Math.hypot(a.x-player.position.x,a.z-player.position.z)-Math.hypot(b.x-player.position.x,b.z-player.position.z))[0];}if(!state.claimed)return {x:0,z:1};if(!state.conveyor)return {x:-6,z:-4};if(state.bag.some(n=>n))return {x:0,z:-1};return spools.filter(s=>s.available).sort((a,b)=>Math.hypot(a.x-player.position.x,a.z-player.position.z)-Math.hypot(b.x-player.position.x,b.z-player.position.z))[0];}
+function interact(nearbyAction=nearby){const nearby=nearbyAction;if(!nearby||modalOpen())return;if(nearby.action==='heal'){setHealth(100);notify('Health restored.');return;}if(nearby.action==='dispatch'){keys.clear();renderOrders();$('dispatch').showModal();return;}if(nearby.action==='fly'){startFlight('lab');return;}if(nearby.action==='return'){startFlight('earth');return;}if(nearby.action==='alienLab'){keys.clear();renderAlienResearch();$('alienResearch').showModal();return;}if(nearby.action==='shop'){keys.clear();renderShop();$('shop').showModal();return;}if(nearby.action==='research'){keys.clear();renderResearch();$('research').showModal();return;}if(nearby.action==='mine'&&gameNow<miningReady){
+ notify('The mine is recharging. Return in '+Math.ceil((miningReady-gameNow)/1000)+'s.');
+ return;
+}
+const result=act(state,nearby.action,nearby.index);
+if(result&&nearby.action==='mine')miningReady=gameNow+12000;
+if(!result){notify(nearby.action==='buy'?'The conveyor costs $500.':nearby.action==='rocket'?'The rocket costs $1,000. Keep earning money at your factory.':nearby.action==='catch'?'Alien carrier full! Take your aliens to the lab.':'Your backpack is full. Return to the funnel.');return;}if(nearby.action==='net')netEquipped=true;if(nearby.action==='catch'){const alien=aliens[nearby.index];alien.available=false;alien.group.visible=false;alien.next=gameNow+20000;}if(nearby.action==='collect'){const spool=spools[nearby.index];spool.available=false;spool.group.visible=false;spool.next=gameNow+8000;}
  if(typeof result==='object'){
   // Pay immediately so closing the tab during the conveyor animation cannot lose materials.
   state.money+=result.payout;notify('Materials processed! Earned $'+result.payout+'.');let n=0;result.cargo.forEach((amount,i)=>{for(let j=0;j<amount;j++){const cube=box(.45,.45,.45,3,1.6,-3,materials[i].color);cube.visible=false;processed.push({cube,start:gameNow+n++*350});}});
  }else notify(result);updateHUD();persist();}
+let miningReady=0;
 const stepPads = [
+ ...surveySites.map((site,index)=>({
+  region:'earth',...site,w:4,d:4,index,
+  action:()=>state.conveyor&&!state.surveys.includes(index)?'survey':null
+ })),
+ {region:'earth',x:69,z:-30,w:4,d:4,action:()=>state.conveyor?'mine':null},
  {region:'earth',x:0,z:1,w:4,d:3,action:()=>!state.claimed?'claim':null},
  {region:'earth',x:-6,z:-4,w:3,d:3,action:()=>state.claimed&&!state.conveyor?'buy':null},
  {region:'earth',x:0,z:-1.1,w:2,d:1,action:()=>state.conveyor&&state.bag.some(Boolean)?'deposit':null},
  {region:'earth',...medStation,w:2,d:2,action:()=>health<100?'heal':null},
  {region:'earth',x:19,z:26,w:2,d:2,action:()=>state.conveyor&&!state.net?'net':null},
  {region:'earth',x:25,z:4,w:7,d:7,action:()=>state.conveyor?(state.rocket?'fly':'rocket'):null},
- {region:'lab',x:100,z:8,w:4,d:3,action:()=>state.rocket?'return':null},
+ {region:'lab',x:LAB_X,z:8,w:4,d:3,action:()=>state.rocket?'return':null},
  ...spools.map((spool,index)=>({
   region:'earth',x:spool.x,z:spool.z,radius:1.5,index,
   action:()=>state.conveyor&&spool.available?'collect':null
@@ -183,11 +205,18 @@ function activateStepPad(position){
 }
 function modalOpen(){return $('instructions').open||$('research').open||$('shop').open||$('alienResearch').open||$('pauseMenu').open||$('dispatch').open||$('robuxExtras').open||!!flight;}
 function startFlight(destination){if(!state.rocket||flight)return;keys.clear();flight={destination,start:gameNow};orbit.enabled=false;$('flight').hidden=false;$('flightDestination').textContent=destination==='lab'?'International Alien Lab':'The Factory · Earth';$('flightText').textContent=destination==='lab'?'Launching to the International Alien Lab…':'Returning to The Factory…';flame.visible=location==='earth';}
-function arrive(destination){location=destination;const pos=new THREE.Vector3(destination==='lab'?100:25,0,destination==='lab'?4:9);const delta=pos.clone().sub(player.position);player.position.copy(pos);camera.position.add(delta);orbit.target.add(delta);scene.background.set(destination==='lab'?0x10182e:0xa9d7ee);scene.fog.color.copy(scene.background);sun.position.set(destination==='lab'?88:-12,30,15);sun.target.position.set(destination==='lab'?100:0,0,0);scene.add(sun.target);rocket.position.y=0;flame.visible=false;orbit.enabled=true;flight=null;$('flight').hidden=true;updateHUD();notify(destination==='lab'?'Welcome to the International Alien Lab! Bring your aliens to the study bench.':'Back on Earth. Catch more aliens in the material yard.');}
+function arrive(destination,atHome=false){
+ location=destination;
+ keys.clear();
+ standingPad=null;
+ const pos=new THREE.Vector3(atHome?0:destination==='lab'?LAB_X:25,0,atHome?6:destination==='lab'?4:9);const delta=pos.clone().sub(player.position);player.position.copy(pos);camera.position.add(delta);orbit.target.add(delta);scene.background.set(destination==='lab'?0x10182e:0xa9d7ee);scene.fog.color.copy(scene.background);sun.position.set(destination==='lab'?LAB_X-12:-12,30,15);sun.target.position.set(destination==='lab'?LAB_X:0,0,0);scene.add(sun.target);rocket.position.y=0;flame.visible=false;orbit.enabled=true;flight=null;$('flight').hidden=true;updateHUD();notify(atHome?'Teleported to your factory.':destination==='lab'?'Welcome to the International Alien Lab! Bring your aliens to the study bench.':'Back on Earth. Catch more aliens in the material yard.');}
+$('teleportHome').onclick=()=>{
+ if(!modalOpen()&&!atFactory())arrive('earth',true);
+};
 $('cargoToggle').onclick=()=>{if(innerWidth<=720)document.body.classList.toggle('cargo-open');else document.body.classList.toggle('cargo-hidden');};
 $('netToggle').onclick=()=>{if(modalOpen())return;netEquipped=!netEquipped;updateHUD();notify(netEquipped?'Net equipped. Approach an alien and press E or tap Catch.':'Net put away.');};
-$('mission').onclick=()=>{const modes=['Materials','Aliens','Deliveries','Crystals'];guide=modes[(modes.indexOf(guide)+1)%modes.length];$('mission').textContent='Guide: '+guide;updateHUD();};
-function renderAlienResearch(){$('alienResearchOptions').replaceChildren();alienTypes.forEach((a,i)=>{const row=document.createElement('div');row.className='research-row';const text=document.createElement('span');text.textContent=a.name+' · Captured '+state.aliens[i]+' · Studied '+state.alienStudies[i];const button=document.createElement('button');button.textContent='Study & release · +$1,000';button.disabled=!state.aliens[i];button.onclick=()=>{if(location!=='lab'||Math.hypot(player.position.x-100,player.position.z+5)>3.2)return;const result=act(state,'alienStudy',i);if(result){updateHUD();persist();renderAlienResearch();$('alienResearchStatus').textContent=result;}};row.append(text,button);$('alienResearchOptions').append(row);});}
+$('mission').onclick=()=>{const modes=['Materials','Aliens','Deliveries','Crystals','Expedition'];guide=modes[(modes.indexOf(guide)+1)%modes.length];$('mission').textContent='Guide: '+guide;updateHUD();};
+function renderAlienResearch(){$('alienResearchOptions').replaceChildren();alienTypes.forEach((a,i)=>{const row=document.createElement('div');row.className='research-row';const text=document.createElement('span');text.textContent=a.name+' · Captured '+state.aliens[i]+' · Studied '+state.alienStudies[i];const button=document.createElement('button');button.textContent='Study & release · +$1,000';button.disabled=!state.aliens[i];button.onclick=()=>{if(location!=='lab'||Math.hypot(player.position.x-LAB_X,player.position.z+5)>3.2)return;const result=act(state,'alienStudy',i);if(result){updateHUD();persist();renderAlienResearch();$('alienResearchStatus').textContent=result;}};row.append(text,button);$('alienResearchOptions').append(row);});}
 $('closeAlienResearch').onclick=()=>$('alienResearch').close();$('alienResearch').addEventListener('close',()=>{$('alienResearchStatus').textContent='';});
 function sprint(){if(modalOpen()||gameNow<sprintReady)return;sprintUntil=gameNow+1500;sprintReady=gameNow+6000;notify('Sprint boost!');}
 $('sprint').onclick=sprint;
@@ -226,10 +255,16 @@ addEventListener('keydown',e=>{
  if(e.code==='Space'&&e.target instanceof HTMLElement&&e.target.closest('button,a,input,select,textarea,[contenteditable]'))return;
  if(e.code==='KeyQ'&&!modalOpen()){e.preventDefault();if(!e.repeat)stunPulse();return;}if(['+','=','-','_'].includes(e.key)&&!modalOpen()){e.preventDefault();zoomCamera(e.key==='+'||e.key==='='?.8:1.25);return;}if(e.code==='Space'&&!modalOpen()){e.preventDefault();if(!e.repeat)sprint();return;}if(e.key==='Escape'){e.preventDefault();if(!e.repeat){if($('pauseMenu').open)resumeGame();else pauseGame();}return;}if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d','W','A','S','D','e','E'].includes(e.key)&&!modalOpen()){e.preventDefault();keys.add(e.key.toLowerCase());if(e.key.toLowerCase()==='e'&&!e.repeat)interact();}});addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));addEventListener('blur',()=>keys.clear());document.addEventListener('visibilitychange',()=>keys.clear());
 for(const button of document.querySelectorAll('[data-move]')){button.onpointerdown=e=>{e.preventDefault();button.setPointerCapture(e.pointerId);keys.add(button.dataset.move.toLowerCase());};for(const event of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(event,()=>keys.delete(button.dataset.move.toLowerCase()));}
-function canMove(x,z){if(location==='lab'?(x<88.7||x>111.3||z< -10.3||z>10.3):(Math.abs(x)>35||z>36||z< -25))return false;return !colliders.some(c=>{if(!state.conveyor&&((c.x>=1&&c.x<=5)||c.x===0&&c.z===-3))return false;return Math.abs(x-c.x)<c.w/2+.4&&Math.abs(z-c.z)<c.d/2+.4;});}
-function tick(realNow){const dt=Math.min((realNow-last)/1000,.05);last=realNow;if($('pauseMenu').open){renderer.render(scene,camera);requestAnimationFrame(tick);return;}const now=gameNow+=dt*1000;let dx=0,dz=0;if(!modalOpen()){dx=(keys.has('d')||keys.has('arrowright')?1:0)-(keys.has('a')||keys.has('arrowleft')?1:0);dz=(keys.has('s')||keys.has('arrowdown')?1:0)-(keys.has('w')||keys.has('arrowup')?1:0);}const forward=new THREE.Vector3();camera.getWorldDirection(forward);forward.y=0;forward.normalize();const right=new THREE.Vector3().crossVectors(forward,new THREE.Vector3(0,1,0));const move=right.multiplyScalar(dx).addScaledVector(forward,-dz);dx=move.x;dz=move.z;
+function canMove(x,z){if(location==='lab'?(Math.abs(x-LAB_X)>11.3||Math.abs(z)>10.3):(x<EARTH_BOUNDS.minX||x>EARTH_BOUNDS.maxX||z<EARTH_BOUNDS.minZ||z>EARTH_BOUNDS.maxZ))return false;return !colliders.some(c=>{if(!state.conveyor&&((c.x>=1&&c.x<=5)||c.x===0&&c.z===-3))return false;return Math.abs(x-c.x)<c.w/2+.4&&Math.abs(z-c.z)<c.d/2+.4;});}
+const syncPlayers=connectWorld({
+ THREE,scene,label,status:$('worldStatus'),labX:LAB_X,bounds:EARTH_BOUNDS,
+ readPosition:()=>({zone:location,x:player.position.x,z:player.position.z,yaw:player.rotation.y})
+});
+function tick(realNow){const dt=Math.min((realNow-last)/1000,.05);last=realNow;syncPlayers(realNow,dt);if($('pauseMenu').open){renderer.render(scene,camera);requestAnimationFrame(tick);return;}const now=gameNow+=dt*1000;let dx=0,dz=0;if(!modalOpen()){dx=(keys.has('d')||keys.has('arrowright')?1:0)-(keys.has('a')||keys.has('arrowleft')?1:0);dz=(keys.has('s')||keys.has('arrowdown')?1:0)-(keys.has('w')||keys.has('arrowup')?1:0);}const forward=new THREE.Vector3();camera.getWorldDirection(forward);forward.y=0;forward.normalize();const right=new THREE.Vector3().crossVectors(forward,new THREE.Vector3(0,1,0));const move=right.multiplyScalar(dx).addScaledVector(forward,-dz);dx=move.x;dz=move.z;
  const previous=player.position.clone();const length=Math.hypot(dx,dz);if(length){const speed=(state.upgrades.speed?7.5:6)*(now<sprintUntil?1.8:1);dx=dx/length*speed*dt;dz=dz/length*speed*dt;if(canMove(player.position.x+dx,player.position.z))player.position.x+=dx;if(canMove(player.position.x,player.position.z+dz))player.position.z+=dz;player.rotation.y=Math.atan2(dx,dz);legs[0].rotation.x=Math.sin(now*.013)*.5;legs[1].rotation.x=-legs[0].rotation.x;}else legs.forEach(l=>l.rotation.x=0);
  updateAliens(now,dt);
+ $('teleportHome').hidden=atFactory();
+ $('teleportHome').disabled=!!flight;
  const p=player.position,dist=(x,z)=>Math.hypot(x-p.x,z-p.z);nearby=null;
  activateStepPad(p);
  if(state.claimed&&!state.conveyor&&dist(-6,-4)<2.6)nearby={action:'buy',text:'Buy conveyor · $500'};
@@ -239,7 +274,7 @@ function tick(realNow){const dt=Math.min((realNow-last)/1000,.05);last=realNow;i
  if(location==='earth'&&state.conveyor){if(!state.net&&dist(19,26)<2.7)nearby={action:'net',text:'Pick up free alien net'};if(state.net&&netEquipped)aliens.forEach((a,i)=>{if(a.available&&dist(a.x,a.z)<2.4)nearby={action:'catch',index:i,text:'Catch '+alienTypes[i].name};});if(dist(25,4)<4)nearby={action:state.rocket?'fly':'rocket',text:state.rocket?'Ride rocket to alien lab':'Buy rocket · $1,000'};}
  if(location==='earth'&&state.conveyor&&dist(-7,-1)<3)nearby={action:'dispatch',text:'Open delivery jobs'};
  if(location==='earth'&&health<100&&dist(medStation.x,medStation.z)<2)nearby={action:'heal',text:'Restore health · Free'};
- if(location==='lab'){nearby=null;if(dist(100,-5)<3.2)nearby={action:'alienLab',text:'Study captured aliens'};if(dist(100,8)<2.7)nearby={action:'return',text:'Ride rocket back to Earth'};}
+ if(location==='lab'){nearby=null;if(dist(LAB_X,-5)<3.2)nearby={action:'alienLab',text:'Study captured aliens'};if(dist(LAB_X,8)<2.7)nearby={action:'return',text:'Ride rocket back to Earth'};}
  $('interact').disabled=!nearby||!!flight;setControlText('interact',nearby?nearby.text+' · E':'Interact · E');setControlText('prompt',nearby?'Press E or tap below':'WASD / arrows to move · Follow blue arrow');
  let t=target();
  // Route guidance through the open doorway instead of pointing into the front wall.
