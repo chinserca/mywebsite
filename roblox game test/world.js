@@ -1,4 +1,6 @@
 export const LAB_X = 1000;
+export const blueprintRoller = {x:LAB_X+7,z:-2};
+export const stationRelays = [{x:LAB_X-8,z:1},{x:LAB_X+8,z:6},{x:LAB_X-4,z:-8}];
 export const EARTH_BOUNDS = {minX:-135,maxX:135,minZ:-110,maxZ:140};
 export const surveySites = [
  {name:'Copper Ridge',x:64,z:-36,color:0xf1a45f},
@@ -76,6 +78,15 @@ export function buildAdventureWorld({THREE,scene,box,label,player}){
  for(const x of [LAB_X-11,LAB_X+11])box(.12,.08,20,x,.22,0,0x6cf9d9);
  for(let z=-9;z<10;z+=3)box(21,.03,.06,LAB_X,.21,z,0x4e7e9c);
  for(const x of [LAB_X-8,LAB_X+8]){ring(x,-6,1.2,0x6bfbd7);const specimen=mesh(new THREE.IcosahedronGeometry(.65,1),x===LAB_X-8?0xc1a0ff:0x81ffc8,x,1.8,-6,true);animated.push({kind:'specimen',m:specimen});}
+ box(2.6,2,1.5,blueprintRoller.x,1,blueprintRoller.z,0x294461,true);
+ box(2.1,.65,.08,blueprintRoller.x,1.6,blueprintRoller.z+.79,0x6daeff);
+ ring(blueprintRoller.x,blueprintRoller.z,1.9,0x83bbff);
+ label('SHIP BLUEPRINTS · $9,000',blueprintRoller.x,3,blueprintRoller.z,'#c4e0ff',.76);
+ const relayLights=stationRelays.map(({x,z},index)=>{
+  box(2.3,.14,2.3,x,.24,z,0x41516b);
+  label('RELAY '+(index+1),x,1.65,z,'#e3edff',.5);
+  return ring(x,z,.86,0xffb766,.35);
+ });
  const planet=mesh(new THREE.IcosahedronGeometry(5,3),0x327db5,LAB_X,9,-29);const land=mesh(new THREE.IcosahedronGeometry(5.04,1),0x6bc9a5,LAB_X,9,-29);land.scale.set(.6,1,.97);animated.push({kind:'planet',m:planet},{kind:'planet',m:land});
  const stars=new THREE.BufferGeometry();const starPositions=[];for(let i=0;i<170;i++){const a=i*2.399963,r=22+i%18;starPositions.push(LAB_X+Math.cos(a)*r,7+i%23,Math.sin(a)*r);}stars.setAttribute('position',new THREE.Float32BufferAttribute(starPositions,3));scene.add(new THREE.Points(stars,new THREE.PointsMaterial({color:0xc6f5ff,size:.14,sizeAttenuation:true})));
  const crystalPositions=[[-18,7,'earth'],[29,-12,'earth'],[-26,28,'earth'],[10,33,'earth'],[-29,-1,'earth'],[LAB_X-9,7,'lab'],[LAB_X+9,2,'lab'],[LAB_X+5,-8,'lab']];
@@ -85,6 +96,11 @@ export function buildAdventureWorld({THREE,scene,box,label,player}){
  const propeller=new THREE.Mesh(new THREE.BoxGeometry(1.4,.05,.12),material(0x67eddf));propeller.position.y=.5;drone.add(propeller);drone.position.copy(player.position);drone.visible=false;
  function celebrate(position,color,time){for(let i=0;i<12;i++){const m=mesh(new THREE.IcosahedronGeometry(.1,0),color,position.x,position.y+1,position.z,true);bursts.push({m,start:time,velocity:new THREE.Vector3(Math.cos(i*2.4)*2,2+i%3,Math.sin(i*2.4)*2)});}}
  function update(now,dt,state,location){
+  relayLights.forEach((light,index)=>{
+   const color=state.relays.includes(index)?0x6bfbd7:0xffb766;
+   light.material.color.setHex(color);
+   light.material.emissive.setHex(color);
+  });
   for(const c of crystals){c.m.visible=c.marker.visible=!state.crystals.includes(c.id);c.m.rotation.y=now*.001;c.m.position.y=1.1+Math.sin(now*.003+c.id)*.25;}
   for(const a of animated){if(a.kind==='steam'){const t=(now*.00035+a.offset/3)%1;a.m.position.set(a.x+t*.8,6+t*5,-15);a.m.scale.setScalar(.5+t);a.m.material.opacity=(1-t)*.35;}else if(a.kind==='specimen'){a.m.rotation.y=now*.001;a.m.position.y=1.8+Math.sin(now*.003)*.2;}else a.m.rotation.y=now*.00007;}
   drone.visible=!!state.upgrades.drone;if(drone.visible){const desired=player.position.clone().add(new THREE.Vector3(-1.5,2.7+Math.sin(now*.004)*.15,1));if(drone.position.distanceTo(desired)>25)drone.position.copy(desired);else drone.position.lerp(desired,1-Math.exp(-dt*5));drone.rotation.y=now*.0005;propeller.rotation.y=now*.045;}

@@ -87,5 +87,5 @@ export function setupAvatar(appearance, dialog) {
   status.textContent = 'Using the Factory character.';
  };
  dialog.querySelector('#closeAvatar').onclick = () => dialog.close();
- return () => isImage(selected?.image) ? selected.image : '';
+ return () => isImage(selected?.image) ? {skin:selected.image,username:selected.username} : {};
 }

@@ -1,7 +1,39 @@
+export const blueprintPrice = 9000;
+export const blueprintTiers = [
+ {name:'Common',ship:'Courier',chance:50},
+ {name:'Uncommon',ship:'Pathfinder',chance:28},
+ {name:'Epic',ship:'Starwing',chance:13},
+ {name:'Legendary',ship:'Solar Spear',chance:6},
+ {name:'Mythical',ship:'Nebula Ark',chance:2.3},
+ {name:'Unreal',ship:'Voidrunner',chance:0.6},
+ {name:'God',ship:'Celestial Crown',chance:0.1}
+];
+export const relayCount = 3;
+
+export function rollBlueprint(state, random = Math.random) {
+ if (!state.rocket || state.money < blueprintPrice) return null;
+ let roll = random()*100;
+ const index = blueprintTiers.findIndex(tier => (roll -= tier.chance) < 0);
+ const tierIndex = index === -1 ? blueprintTiers.length - 1 : index;
+ state.money -= blueprintPrice;
+ state.blueprints[tierIndex]++;
+ return blueprintTiers[tierIndex];
+}
+
+export function repairRelay(state, index) {
+ if (!state.rocket || !Number.isInteger(index) || index < 0 || index >= relayCount || state.relays.includes(index)) return null;
+ state.relays.push(index);
+ const reward = state.relays.length === relayCount ? 1500 : 500;
+ state.money += reward;
+ return (state.relays.length === relayCount ? 'All station relays online!' : 'Relay restored!')+' +$'+reward.toLocaleString();
+}
+
 export const materials=[{name:'PLA',color:0xffca55,value:65},{name:'TPU',color:0xb18aff,value:85},{name:'Metal',color:0xadb8c3,value:150},{name:'PETG',color:0x48d8c5,value:80},{name:'PETG-CF',color:0x387c9b,value:120},{name:'PLA-CF',color:0x526078,value:110},{name:'TPU-CF',color:0x975b91,value:130}];
-export function newState(){return {money:1000,claimed:false,conveyor:false,bag:materials.map(()=>0),studied:materials.map(()=>false),upgrades:{backpack:false,speed:false,processor:false,drone:false,shield:false},rocket:false,net:false,aliens:[0,0,0],alienStudies:[0,0,0],deliveries:0,crystals:[],surveys:[],salvage:false};}
+export function newState(){return {money:1000,claimed:false,conveyor:false,bag:materials.map(()=>0),studied:materials.map(()=>false),upgrades:{backpack:false,speed:false,processor:false,drone:false,shield:false},rocket:false,net:false,aliens:[0,0,0],alienStudies:[0,0,0],deliveries:0,crystals:[],surveys:[],salvage:false,blueprints:blueprintTiers.map(()=>0),relays:[]};}
 export const alienTypes=[{name:'Jade Hopper',color:0x7bef9f},{name:'Violet Floater',color:0xb795ff},{name:'Solar Sprout',color:0xffbd64}];
-export function validSpaceState(s){return (s.salvage===undefined||typeof s.salvage==='boolean')&&(s.surveys===undefined||Array.isArray(s.surveys)&&s.surveys.every(n=>Number.isInteger(n)&&n>=0&&n<5)&&new Set(s.surveys).size===s.surveys.length)&&(s.deliveries===undefined||Number.isSafeInteger(s.deliveries)&&s.deliveries>=0)&&(s.crystals===undefined||Array.isArray(s.crystals)&&s.crystals.every(n=>Number.isInteger(n)&&n>=0&&n<8)&&new Set(s.crystals).size===s.crystals.length)&&(s.upgrades?.shield===undefined||typeof s.upgrades.shield==='boolean')&&(s.upgrades?.drone===undefined||typeof s.upgrades.drone==='boolean')&&(s.rocket===undefined||typeof s.rocket==='boolean')&&(s.net===undefined||typeof s.net==='boolean')&&['aliens','alienStudies'].every(key=>s[key]===undefined||Array.isArray(s[key])&&s[key].length===3&&s[key].every(n=>Number.isSafeInteger(n)&&n>=0))&&(s.aliens===undefined||s.aliens.reduce((a,b)=>a+b,0)<=6);}
+export function validSpaceState(s){return (s.blueprints===undefined||Array.isArray(s.blueprints)&&s.blueprints.length===blueprintTiers.length&&s.blueprints.every(n=>Number.isSafeInteger(n)&&n>=0))
+ &&(s.relays===undefined||Array.isArray(s.relays)&&s.relays.every(n=>Number.isInteger(n)&&n>=0&&n<relayCount)&&new Set(s.relays).size===s.relays.length)
+ &&(s.salvage===undefined||typeof s.salvage==='boolean')&&(s.surveys===undefined||Array.isArray(s.surveys)&&s.surveys.every(n=>Number.isInteger(n)&&n>=0&&n<5)&&new Set(s.surveys).size===s.surveys.length)&&(s.deliveries===undefined||Number.isSafeInteger(s.deliveries)&&s.deliveries>=0)&&(s.crystals===undefined||Array.isArray(s.crystals)&&s.crystals.every(n=>Number.isInteger(n)&&n>=0&&n<8)&&new Set(s.crystals).size===s.crystals.length)&&(s.upgrades?.shield===undefined||typeof s.upgrades.shield==='boolean')&&(s.upgrades?.drone===undefined||typeof s.upgrades.drone==='boolean')&&(s.rocket===undefined||typeof s.rocket==='boolean')&&(s.net===undefined||typeof s.net==='boolean')&&['aliens','alienStudies'].every(key=>s[key]===undefined||Array.isArray(s[key])&&s[key].length===3&&s[key].every(n=>Number.isSafeInteger(n)&&n>=0))&&(s.aliens===undefined||s.aliens.reduce((a,b)=>a+b,0)<=6);}
 export function validState(s){return s&&validSpaceState(s)&&Number.isSafeInteger(s.money)&&s.money>=0&&typeof s.claimed==='boolean'&&typeof s.conveyor==='boolean'&&(!s.conveyor||s.claimed)&&Array.isArray(s.bag)&&s.bag.length===7&&s.bag.every(n=>Number.isInteger(n)&&n>=0)&&s.bag.reduce((a,b)=>a+b,0)<=capacity(s)&&(s.studied===undefined||Array.isArray(s.studied)&&s.studied.length===7&&s.studied.every(v=>typeof v==='boolean'))&&(s.upgrades===undefined||s.upgrades&&['backpack','speed','processor'].every(k=>typeof s.upgrades[k]==='boolean')); }
 export const orders=[{name:'School Maker Kit',needs:[3,0,0,0,0,0,0]},{name:'Space Station Parts',needs:[0,0,2,0,1,0,0]},{name:'Flexible Robot Kit',needs:[0,2,0,2,0,0,0]}];
 export function orderValue(s,i){return Math.round(orders[i].needs.reduce((sum,n,k)=>sum+n*materialValue(s,k),0)*1.6);}

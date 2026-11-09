@@ -1,4 +1,4 @@
-import {attachAvatar} from './avatar.js';
+import {attachAvatar} from './avatar.js?v=station';
 const playerId = crypto.randomUUID();
 const expiryMs = 12000;
 
@@ -26,6 +26,7 @@ export function connectWorld({THREE,scene,label,status,readPosition,labX,bounds}
   if(zone==='earth'){
    if(x<bounds.minX||x>bounds.maxX||z<bounds.minZ||z>bounds.maxZ)return;
   }else if(zone!=='lab'||Math.abs(x-labX)>12||Math.abs(z)>11)return;
+  const name=typeof payload.username==='string'&&/^[a-zA-Z0-9_]{3,20}$/.test(payload.username)?payload.username:'PLAYER '+id.slice(0,4).toUpperCase();
   let peer=peers.get(id);
   if(!peer){
    if(peers.size>=32)return;
@@ -35,11 +36,18 @@ export function connectWorld({THREE,scene,label,status,readPosition,labX,bounds}
     mesh.scale.set(w,h,d);mesh.position.set(px,py,0);avatar.add(mesh);
    }
    scene.add(avatar);
-   peer={avatar,appearance:attachAvatar(THREE,avatar,[...avatar.children]),sign:label('PLAYER '+id.slice(0,4).toUpperCase(),x,2.95,z,'#dfd3ff',.46),zone};
+   peer={avatar,appearance:attachAvatar(THREE,avatar,[...avatar.children]),name,sign:label(name,x,2.95,z,'#dfd3ff',.55),zone};
    avatar.position.set(x,0,z);
    peers.set(id,peer);
   }
   if(peer.zone!==zone||Math.hypot(x-peer.avatar.position.x,z-peer.avatar.position.z)>16)peer.avatar.position.set(x,0,z);
+  if(peer.name!==name){
+   scene.remove(peer.sign);
+   peer.sign.material.map.dispose();
+   peer.sign.material.dispose();
+   peer.sign=label(name,x,2.95,z,'#dfd3ff',.55);
+   peer.name=name;
+  }
   peer.appearance.set(payload.skin);
   Object.assign(peer,{x,z,yaw,zone,seen:performance.now()});
  }
