@@ -2,7 +2,7 @@ import {setupGameAudio} from './audio.js';
 import {connectWorld} from './multiplayer.js?v=station';
 import {attachAvatar,setupAvatar} from './avatar.js?v=station';
 import * as THREE from 'three';
-import {buildAdventureWorld, LAB_X, EARTH_BOUNDS, surveySites, blueprintRoller, stationRelays, cargoLaunch, cargoDestinations} from './world.js?v=cargo';
+import {buildAdventureWorld, LAB_X, EARTH_BOUNDS, surveySites, blueprintRoller, stationRelays, cargoLaunch, cargoDestinations} from './world.js?v=smooth';
 import {setupMouseLock} from './mouse-lock.js';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {materials,newState,validState,act,materialValue,capacity,shopItems,alienTypes,orders,orderValue,blueprintPrice,blueprintTiers,rollBlueprint,repairRelay,buildShip,loadCargo,deliverCargo} from './state.js?v=cargo';
@@ -50,20 +50,20 @@ const depositPad=box(2,.12,1,0,.29,-1.1,0x4cc9dc);conveyor.attach(depositPad);
 box(3,1.1,1.6,-7,.65,-11,0x347fba,true);box(1.2,.9,.15,-7,1.7,-11.4,0x24445e);box(.9,.6,.17,-7,1.7,-11.3,0x72e4fd);label('RESEARCH · +50% VALUE',-7,3,-11,'#87e9ff',.75);
 box(2.8,1.2,1.5,8,.7,-12,0x8356b7,true);box(2.5,.2,1.7,8,1.4,-12,0xffcf59);label('UPGRADE SHOP',8,3,-12,'#e2b4ff',.7);
 label('FINISHED GOODS',3,2.5,-12,'#a9ffb5',.55);const spools=[];const positions=[[-9,12],[-6,18],[0,20],[6,18],[9,12],[14,20],[-14,20]];
-materials.forEach((type,i)=>{const [x,z]=positions[i];const group=new THREE.Group();group.position.set(x,.8,z);scene.add(group);for(const offset of [-.42,.42]){const disk=new THREE.Mesh(new THREE.CylinderGeometry(.65,.65,.13,20),new THREE.MeshStandardMaterial({color:0x27394d}));disk.position.y=offset;group.add(disk);}const core=new THREE.Mesh(new THREE.CylinderGeometry(.5,.5,.8,24),new THREE.MeshStandardMaterial({color:type.color}));group.add(core);label(type.name,x,2,z,'#ffffff',.5);spools.push({group,x,z,available:true,next:0});});
-for(const [x,z] of [[-22,-10],[23,-8],[-25,20],[26,24],[-18,31],[20,33]]){box(.8,3,.8,x,1.5,z,0x765b3f,true);const tree=new THREE.Mesh(new THREE.ConeGeometry(3,6,7),new THREE.MeshStandardMaterial({color:0x397458}));tree.position.set(x,5,z);scene.add(tree);}
+materials.forEach((type,i)=>{const [x,z]=positions[i];const group=new THREE.Group();group.position.set(x,.8,z);scene.add(group);for(const offset of [-.42,.42]){const disk=new THREE.Mesh(new THREE.CylinderGeometry(.65,.65,.13,40),new THREE.MeshStandardMaterial({color:0x27394d}));disk.position.y=offset;group.add(disk);}const core=new THREE.Mesh(new THREE.CylinderGeometry(.5,.5,.8,40),new THREE.MeshStandardMaterial({color:type.color}));group.add(core);label(type.name,x,2,z,'#ffffff',.5);spools.push({group,x,z,available:true,next:0});});
+for(const [x,z] of [[-22,-10],[23,-8],[-25,20],[26,24],[-18,31],[20,33]]){box(.8,3,.8,x,1.5,z,0x765b3f,true);const tree=new THREE.Mesh(new THREE.ConeGeometry(3,6,20),new THREE.MeshStandardMaterial({color:0x397458}));tree.position.set(x,5,z);scene.add(tree);}
 // Rocket launch site and a separate walkable orbital laboratory.
 box(7,.25,7,25,.1,4,0x384b66);
 const rocketPurchaseLabel=label('ROCKET · $1,000',25,7,4,'#aeefff',.9);
 const rocketLaunchLabel=label('ROCKET · STEP ON TO LAUNCH',25,7,4,'#aeefff',.9);
 const rocket=new THREE.Group();rocket.position.set(25,0,4);scene.add(rocket);
 function rocketPart(geometry,color,y){const m=new THREE.Mesh(geometry,new THREE.MeshStandardMaterial({color,metalness:.4,roughness:.4}));m.position.y=y;m.castShadow=true;rocket.add(m);return m;}
-rocketPart(new THREE.CylinderGeometry(1,1,4,24),0xe8f1fa,3);rocketPart(new THREE.ConeGeometry(1,2,24),0xff735d,6);rocketPart(new THREE.CylinderGeometry(1.3,1.3,.35,24),0x4188cc,1);const flame=rocketPart(new THREE.ConeGeometry(.65,2,16),0xffb13d,-.1);flame.rotation.z=Math.PI;flame.visible=false;
+rocketPart(new THREE.CylinderGeometry(1,1,4,48),0xe8f1fa,3);rocketPart(new THREE.ConeGeometry(1,2,48),0xff735d,6);rocketPart(new THREE.CylinderGeometry(1.3,1.3,.35,48),0x4188cc,1);const flame=rocketPart(new THREE.ConeGeometry(.65,2,32),0xffb13d,-.1);flame.rotation.z=Math.PI;flame.visible=false;
 for(const x of [-1,1]){const fin=rocketPart(new THREE.BoxGeometry(.25,1.8,1.8),0x4188cc,1.5);fin.position.x=x;}
 const netStand=box(2,.2,2,19,.15,26,0x43b1bd);const netSign=label('FREE ALIEN NET',19,2,26,'#9fffee',.65);
-const aliens=[];alienTypes.forEach((type,i)=>{const group=new THREE.Group();const x=[-18,4,18][i],z=[28,29,17][i];group.position.set(x,.8,z);scene.add(group);const body=new THREE.Mesh(new THREE.SphereGeometry(.6,16,12),new THREE.MeshStandardMaterial({color:type.color}));body.scale.y=1.2;group.add(body);for(const eyeX of [-.22,.22]){const eye=new THREE.Mesh(new THREE.SphereGeometry(.16,12,8),new THREE.MeshStandardMaterial({color:0x182738}));eye.position.set(eyeX,.2,.5);group.add(eye);}const sign=label(type.name,x,2.3,z,'#d5ffde',.5);aliens.push({group,body,sign,x,z,homeX:x,homeZ:z,available:true,next:0,windup:0,attackReady:0,stunnedUntil:0});});
+const aliens=[];alienTypes.forEach((type,i)=>{const group=new THREE.Group();const x=[-18,4,18][i],z=[28,29,17][i];group.position.set(x,.8,z);scene.add(group);const body=new THREE.Mesh(new THREE.SphereGeometry(.6,32,24),new THREE.MeshStandardMaterial({color:type.color}));body.scale.y=1.2;group.add(body);for(const eyeX of [-.22,.22]){const eye=new THREE.Mesh(new THREE.SphereGeometry(.16,24,16),new THREE.MeshStandardMaterial({color:0x182738}));eye.position.set(eyeX,.2,.5);group.add(eye);}const sign=label(type.name,x,2.3,z,'#d5ffde',.5);aliens.push({group,body,sign,x,z,homeX:x,homeZ:z,available:true,next:0,windup:0,attackReady:0,stunnedUntil:0});});
 box(24,.3,22,LAB_X,0,0,0x9caec5);box(24,4,.5,LAB_X,2,-11,0x35435f,true);box(.5,3,22,LAB_X-12,1.5,0,0x35435f,true);box(.5,3,22,LAB_X+12,1.5,0,0x35435f,true);label('INTERNATIONAL ALIEN LAB',LAB_X,5,-10,'#8fffe6',1.3);box(4,1.2,2,LAB_X,.8,-5,0x3d8192,true);box(3,.12,1.8,LAB_X,1.5,-5,0x82e6ed);label('STUDY ALIENS',LAB_X,3.2,-5,'#afffe7',.75);box(4,.15,3,LAB_X,.3,8,0x73b3ff);label('RETURN TO FACTORY',LAB_X,1.5,8,'#cce5ff',.65);
-for(const x of [LAB_X-8,LAB_X+8]){const tank=new THREE.Mesh(new THREE.CylinderGeometry(1,1,3,20),new THREE.MeshStandardMaterial({color:0x74edc2,transparent:true,opacity:.45}));tank.position.set(x,1.8,-6);scene.add(tank);}
+for(const x of [LAB_X-8,LAB_X+8]){const tank=new THREE.Mesh(new THREE.CylinderGeometry(1,1,3,48),new THREE.MeshStandardMaterial({color:0x74edc2,transparent:true,opacity:.45}));tank.position.set(x,1.8,-6);scene.add(tank);}
 let location='earth',netEquipped=false,guide='Materials',flight=null,cargoFlying=false;
 const player=new THREE.Group();player.position.set(0,0,9);scene.add(player);
 function body(w,h,d,x,y,z,color){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({color}));m.position.set(x,y,z);m.castShadow=true;player.add(m);return m;}
@@ -71,9 +71,9 @@ body(.8,.9,.45,0,1.3,0,0x3485e4);body(.6,.6,.6,0,2.07,0,0xffd49b);body(.75,.14,.
 const appearance=attachAvatar(THREE,player,[...player.children]);
 const avatarProfile=setupAvatar(appearance,$('avatarDialog'));
 $('avatarButton').onclick=()=>{keys.clear();$('avatarDialog').showModal();};
-const handNet=new THREE.Group();handNet.position.set(.8,1.3,.4);player.add(handNet);const handle=new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,1.5,8),new THREE.MeshStandardMaterial({color:0xd5b479}));handle.position.y=.4;handNet.add(handle);const ring=new THREE.Mesh(new THREE.TorusGeometry(.6,.045,8,24),new THREE.MeshStandardMaterial({color:0x63dcff}));ring.position.y=1.6;handNet.add(ring);const meshNet=new THREE.Mesh(new THREE.SphereGeometry(.58,12,8,0,Math.PI*2,0,Math.PI/2),new THREE.MeshBasicMaterial({color:0xdcfaff,wireframe:true}));meshNet.rotation.x=Math.PI/2;meshNet.position.set(0,1.6,-.15);handNet.add(meshNet);handNet.visible=false;
+const handNet=new THREE.Group();handNet.position.set(.8,1.3,.4);player.add(handNet);const handle=new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,1.5,8),new THREE.MeshStandardMaterial({color:0xd5b479}));handle.position.y=.4;handNet.add(handle);const ring=new THREE.Mesh(new THREE.TorusGeometry(.6,.045,12,48),new THREE.MeshStandardMaterial({color:0x63dcff}));ring.position.y=1.6;handNet.add(ring);const meshNet=new THREE.Mesh(new THREE.SphereGeometry(.58,12,8,0,Math.PI*2,0,Math.PI/2),new THREE.MeshBasicMaterial({color:0xdcfaff,wireframe:true}));meshNet.rotation.x=Math.PI/2;meshNet.position.set(0,1.6,-.15);handNet.add(meshNet);handNet.visible=false;
 const cargoShip=new THREE.Group();
-const hull=new THREE.Mesh(new THREE.ConeGeometry(1.25,4.8,5),new THREE.MeshStandardMaterial({color:0x7acaff,metalness:.45,roughness:.35}));
+const hull=new THREE.Mesh(new THREE.ConeGeometry(1.25,4.8,32),new THREE.MeshStandardMaterial({color:0x7acaff,metalness:.45,roughness:.35}));
 hull.rotation.x=Math.PI/2;
 cargoShip.add(hull);
 for(const x of [-1.4,1.4]){
