@@ -29,9 +29,27 @@ export function repairRelay(state, index) {
 }
 
 export const materials=[{name:'PLA',color:0xffca55,value:65},{name:'TPU',color:0xb18aff,value:85},{name:'Metal',color:0xadb8c3,value:150},{name:'PETG',color:0x48d8c5,value:80},{name:'PETG-CF',color:0x387c9b,value:120},{name:'PLA-CF',color:0x526078,value:110},{name:'TPU-CF',color:0x975b91,value:130}];
-export function newState(){return {money:1000,claimed:false,conveyor:false,bag:materials.map(()=>0),studied:materials.map(()=>false),upgrades:{backpack:false,speed:false,processor:false,drone:false,shield:false},rocket:false,net:false,aliens:[0,0,0],alienStudies:[0,0,0],deliveries:0,crystals:[],surveys:[],salvage:false,blueprints:blueprintTiers.map(()=>0),relays:[],ships:blueprintTiers.map(()=>false),cargoRun:null};}
+export function newState(){return {money:1000,claimed:false,conveyor:false,bag:materials.map(()=>0),studied:materials.map(()=>false),upgrades:{backpack:false,speed:false,processor:false,drone:false,shield:false},rocket:false,net:false,aliens:[0,0,0],alienStudies:[0,0,0],deliveries:0,crystals:[],surveys:[],salvage:false,blueprints:blueprintTiers.map(()=>0),relays:[],ships:blueprintTiers.map(()=>false),cargoRun:null,cells:[0,0,0],hybrids:[0,0,0],notes:[false,false,false]};}
 export const alienTypes=[{name:'Jade Hopper',color:0x7bef9f},{name:'Violet Floater',color:0xb795ff},{name:'Solar Sprout',color:0xffbd64}];
-export function validSpaceState(s){return (s.ships===undefined||Array.isArray(s.ships)&&s.ships.length===blueprintTiers.length&&s.ships.every(ship=>typeof ship==='boolean'))
+export const hybridTypes=[
+ {name:'Amethyst Hopper',color:0xa58bff,parents:[0,1]},
+ {name:'Sunleaf Sprout',color:0xd9ef74,parents:[0,2]},
+ {name:'Twilight Floater',color:0xff89bf,parents:[1,2]}
+];
+
+export function combineCells(state, first, second){
+ const index=hybridTypes.findIndex(({parents:[a,b]})=>
+  (a===first&&b===second)||(a===second&&b===first));
+ if(index<0||!state.cells[first]||!state.cells[second])return null;
+ state.cells[first]--;
+ state.cells[second]--;
+ state.hybrids[index]++;
+ return hybridTypes[index];
+}
+
+export function validSpaceState(s){return ['cells','hybrids'].every(key=>s[key]===undefined||Array.isArray(s[key])&&s[key].length===3&&s[key].every(n=>Number.isSafeInteger(n)&&n>=0))
+ &&(s.notes===undefined||Array.isArray(s.notes)&&s.notes.length===3&&s.notes.every(n=>typeof n==='boolean'))
+ &&(s.ships===undefined||Array.isArray(s.ships)&&s.ships.length===blueprintTiers.length&&s.ships.every(ship=>typeof ship==='boolean'))
  &&(s.cargoRun==null||s.conveyor&&Number.isInteger(s.cargoRun.order)&&orders[s.cargoRun.order]&&Number.isInteger(s.cargoRun.ship)&&s.ships?.[s.cargoRun.ship]&&Number.isSafeInteger(s.cargoRun.payout)&&s.cargoRun.payout>0)
  &&(s.blueprints===undefined||Array.isArray(s.blueprints)&&s.blueprints.length===blueprintTiers.length&&s.blueprints.every(n=>Number.isSafeInteger(n)&&n>=0))
  &&(s.relays===undefined||Array.isArray(s.relays)&&s.relays.every(n=>Number.isInteger(n)&&n>=0&&n<relayCount)&&new Set(s.relays).size===s.relays.length)
