@@ -9,7 +9,7 @@ export const surveySites = [
  {name:'North Quarry',x:46,z:-90,color:0xb2b4a6},
  {name:'Salvage Yard',x:103,z:56,color:0xe2b778}
 ];
-export const stationBounds = {x:22,z:18};
+export const stationBounds = {x:22,minZ:-60,maxZ:18};
 export const orbitLimit = 85;
 export const cargoLaunch = {x:LAB_X+25,z:8};
 export const stationHangar = {x:LAB_X+17,z:8};

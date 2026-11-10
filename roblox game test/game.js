@@ -2,8 +2,9 @@ import {setupGameAudio} from './audio.js';
 import {connectWorld} from './multiplayer.js?v=orbital';
 import {attachAvatar,setupAvatar} from './avatar.js?v=station';
 import * as THREE from 'three';
-import {buildAdventureWorld, LAB_X, EARTH_BOUNDS, surveySites, blueprintRoller, stationRelays, cargoLaunch, cargoDestinations, stationBounds, orbitLimit, stationHangar} from './world.js?v=orbital';
+import {buildAdventureWorld, LAB_X, EARTH_BOUNDS, surveySites, blueprintRoller, stationRelays, cargoLaunch, cargoDestinations, stationBounds, orbitLimit, stationHangar} from './world.js?v=station-model';
 import {setupMouseLock} from './mouse-lock.js';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {materials,newState,validState,act,materialValue,capacity,shopItems,alienTypes,orders,orderValue,blueprintPrice,blueprintTiers,rollBlueprint,repairRelay,buildShip,loadCargo,deliverCargo} from './state.js?v=cargo';
 const $=id=>document.getElementById(id),saveKey='the-factory-v1';let state=newState();
@@ -62,9 +63,35 @@ rocketPart(new THREE.CylinderGeometry(1,1,4,48),0xe8f1fa,3);rocketPart(new THREE
 for(const x of [-1,1]){const fin=rocketPart(new THREE.BoxGeometry(.25,1.8,1.8),0x4188cc,1.5);fin.position.x=x;}
 const netStand=box(2,.2,2,19,.15,26,0x43b1bd);const netSign=label('FREE ALIEN NET',19,2,26,'#9fffee',.65);
 const aliens=[];alienTypes.forEach((type,i)=>{const group=new THREE.Group();const x=[-18,4,18][i],z=[28,29,17][i];group.position.set(x,.8,z);scene.add(group);const body=new THREE.Mesh(new THREE.SphereGeometry(.6,32,24),new THREE.MeshStandardMaterial({color:type.color}));body.scale.y=1.2;group.add(body);for(const eyeX of [-.22,.22]){const eye=new THREE.Mesh(new THREE.SphereGeometry(.16,24,16),new THREE.MeshStandardMaterial({color:0x182738}));eye.position.set(eyeX,.2,.5);group.add(eye);}const sign=label(type.name,x,2.3,z,'#d5ffde',.5);aliens.push({group,body,sign,x,z,homeX:x,homeZ:z,available:true,next:0,windup:0,attackReady:0,stunnedUntil:0});});
-box(44,.3,36,LAB_X,0,0,0x9caec5);
-box(44,4,.5,LAB_X,2,-18,0x35435f,true);
-for(const x of [LAB_X-22,LAB_X+22])box(.5,2,36,x,1,0,0x35435f,true);
+box(44,.3,34,LAB_X,0,1,0x9caec5);
+const modelCenterZ=-38;
+const annexDeck=box(44,.3,44,LAB_X,-.02,modelCenterZ,0x9caec5);
+for(const x of [LAB_X-22,LAB_X+22])box(.5,2,78,x,1,-21,0x35435f,true);
+box(44,2,.5,LAB_X,1,stationBounds.minZ,0x35435f,true);
+label('STATION CORE',LAB_X,3,-22,'#c2f3ff',.8);
+for(const x of [LAB_X-10,LAB_X+10])box(.14,.05,41,x,.18,modelCenterZ,0x78dcff);
+new GLTFLoader().load('./3d%20files/spaistaison.glb',({scene:model})=>{
+ // The Fusion export is already Y-up. Undo the exporter’s Z-up conversion.
+ model.rotation.x=Math.PI/2;
+ model.scale.setScalar(.44);
+ model.position.set(LAB_X,-.29,modelCenterZ);
+ model.traverse(part=>{
+  if(!part.isMesh)return;
+  const deck=part.name==='deck'||part.parent?.name==='deck';
+  part.material=new THREE.MeshStandardMaterial({
+   color:deck?0x93a7bc:0x58788c,roughness:.75,metalness:.1
+  });
+  part.castShadow=!deck;
+  part.receiveShadow=deck;
+ });
+ scene.add(model);
+ annexDeck.visible=false;
+ colliders.push({x:LAB_X,z:modelCenterZ,radius:16*.44});
+ colliders.push(
+  {x:LAB_X-40.75*.44,z:modelCenterZ-35.5*.44,w:12.5*.44,d:25*.44},
+  {x:LAB_X-40.5267*.44,z:modelCenterZ-12.9713*.44,w:12.5*.44,d:12.5*.44}
+ );
+},undefined,error=>console.warn('Station model could not load:',error));
 label('INTERNATIONAL ALIEN LAB',LAB_X,5,-16,'#8fffe6',1.3);box(4,1.2,2,LAB_X,.8,-5,0x3d8192,true);box(3,.12,1.8,LAB_X,1.5,-5,0x82e6ed);label('STUDY ALIENS',LAB_X,3.2,-5,'#afffe7',.75);box(4,.15,3,LAB_X,.3,8,0x73b3ff);label('RETURN TO FACTORY',LAB_X,1.5,8,'#cce5ff',.65);
 for(const x of [LAB_X-8,LAB_X+8]){const tank=new THREE.Mesh(new THREE.CylinderGeometry(1,1,3,48),new THREE.MeshStandardMaterial({color:0x74edc2,transparent:true,opacity:.45}));tank.position.set(x,1.8,-6);scene.add(tank);}
 let location='earth',netEquipped=false,guide='Materials',flight=null,cargoFlying=false;
@@ -449,7 +476,19 @@ addEventListener('keydown',e=>{
  if(e.code==='Space'&&e.target instanceof HTMLElement&&e.target.closest('button,a,input,select,textarea,[contenteditable]'))return;
  if(e.code==='KeyQ'&&!modalOpen()){e.preventDefault();if(!e.repeat)stunPulse();return;}if(['+','=','-','_'].includes(e.key)&&!modalOpen()){e.preventDefault();zoomCamera(e.key==='+'||e.key==='='?.8:1.25);return;}if(e.code==='Space'&&!modalOpen()){e.preventDefault();if(!e.repeat)sprint();return;}if(e.key==='Escape'){e.preventDefault();if(!e.repeat){if($('pauseMenu').open)resumeGame();else pauseGame();}return;}if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d','W','A','S','D','e','E'].includes(e.key)&&!modalOpen()){e.preventDefault();keys.add(e.key.toLowerCase());if(e.key.toLowerCase()==='e'&&!e.repeat)interact();}});addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));addEventListener('blur',()=>keys.clear());document.addEventListener('visibilitychange',()=>keys.clear());
 for(const button of document.querySelectorAll('[data-move]')){button.onpointerdown=e=>{e.preventDefault();button.setPointerCapture(e.pointerId);keys.add(button.dataset.move.toLowerCase());};for(const event of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(event,()=>keys.delete(button.dataset.move.toLowerCase()));}
-function canMove(x,z){if(location==='lab'?(Math.abs(x-LAB_X)>(cargoFlying?orbitLimit:stationBounds.x-.7)||Math.abs(z)>(cargoFlying?orbitLimit:stationBounds.z-.7)):(x<EARTH_BOUNDS.minX||x>EARTH_BOUNDS.maxX||z<EARTH_BOUNDS.minZ||z>EARTH_BOUNDS.maxZ))return false;return cargoFlying||!colliders.some(c=>{if(!state.conveyor&&((c.x>=1&&c.x<=5)||c.x===0&&c.z===-3))return false;return Math.abs(x-c.x)<c.w/2+.4&&Math.abs(z-c.z)<c.d/2+.4;});}
+function canMove(x,z){
+ if(location==='lab'){
+  const xLimit=cargoFlying?orbitLimit:stationBounds.x-.7;
+  const minZ=cargoFlying?-orbitLimit:stationBounds.minZ+.7;
+  const maxZ=cargoFlying?orbitLimit:stationBounds.maxZ-.7;
+  if(Math.abs(x-LAB_X)>xLimit||z<minZ||z>maxZ)return false;
+ }else if(x<EARTH_BOUNDS.minX||x>EARTH_BOUNDS.maxX||z<EARTH_BOUNDS.minZ||z>EARTH_BOUNDS.maxZ)return false;
+ return cargoFlying||!colliders.some(c=>{
+  if(c.radius)return Math.hypot(x-c.x,z-c.z)<c.radius+.4;
+  if(!state.conveyor&&((c.x>=1&&c.x<=5)||c.x===0&&c.z===-3))return false;
+  return Math.abs(x-c.x)<c.w/2+.4&&Math.abs(z-c.z)<c.d/2+.4;
+ });
+}
 const syncPlayers=connectWorld({
  THREE,scene,label,status:$('worldStatus'),labX:LAB_X,orbitLimit,bounds:EARTH_BOUNDS,
  readPosition:()=>({zone:location,x:player.position.x,z:player.position.z,yaw:player.rotation.y,...avatarProfile()})
