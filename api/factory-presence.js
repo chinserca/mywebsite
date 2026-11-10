@@ -8,7 +8,7 @@ function validPosition(value){
  if(!value||typeof value.id!=='string'||!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(value.id))return false;
  const {x,z,yaw,zone}=value;
  if(![x,z,yaw].every(Number.isFinite)||Math.abs(yaw)>10)return false;
- if(zone==='lab')return Math.abs(x-1000)<=12&&Math.abs(z)<=11;
+ if(zone==='lab')return Math.abs(x-1000)<=85&&Math.abs(z)<=85;
  return zone==='earth'&&Math.abs(x)<=135&&z>=-110&&z<=140;
 }
 

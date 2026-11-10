@@ -1,8 +1,8 @@
 import {setupGameAudio} from './audio.js';
-import {connectWorld} from './multiplayer.js?v=station';
+import {connectWorld} from './multiplayer.js?v=orbital';
 import {attachAvatar,setupAvatar} from './avatar.js?v=station';
 import * as THREE from 'three';
-import {buildAdventureWorld, LAB_X, EARTH_BOUNDS, surveySites, blueprintRoller, stationRelays, cargoLaunch, cargoDestinations} from './world.js?v=smooth';
+import {buildAdventureWorld, LAB_X, EARTH_BOUNDS, surveySites, blueprintRoller, stationRelays, cargoLaunch, cargoDestinations, stationBounds, orbitLimit, stationHangar} from './world.js?v=orbital';
 import {setupMouseLock} from './mouse-lock.js';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {materials,newState,validState,act,materialValue,capacity,shopItems,alienTypes,orders,orderValue,blueprintPrice,blueprintTiers,rollBlueprint,repairRelay,buildShip,loadCargo,deliverCargo} from './state.js?v=cargo';
@@ -62,7 +62,10 @@ rocketPart(new THREE.CylinderGeometry(1,1,4,48),0xe8f1fa,3);rocketPart(new THREE
 for(const x of [-1,1]){const fin=rocketPart(new THREE.BoxGeometry(.25,1.8,1.8),0x4188cc,1.5);fin.position.x=x;}
 const netStand=box(2,.2,2,19,.15,26,0x43b1bd);const netSign=label('FREE ALIEN NET',19,2,26,'#9fffee',.65);
 const aliens=[];alienTypes.forEach((type,i)=>{const group=new THREE.Group();const x=[-18,4,18][i],z=[28,29,17][i];group.position.set(x,.8,z);scene.add(group);const body=new THREE.Mesh(new THREE.SphereGeometry(.6,32,24),new THREE.MeshStandardMaterial({color:type.color}));body.scale.y=1.2;group.add(body);for(const eyeX of [-.22,.22]){const eye=new THREE.Mesh(new THREE.SphereGeometry(.16,24,16),new THREE.MeshStandardMaterial({color:0x182738}));eye.position.set(eyeX,.2,.5);group.add(eye);}const sign=label(type.name,x,2.3,z,'#d5ffde',.5);aliens.push({group,body,sign,x,z,homeX:x,homeZ:z,available:true,next:0,windup:0,attackReady:0,stunnedUntil:0});});
-box(24,.3,22,LAB_X,0,0,0x9caec5);box(24,4,.5,LAB_X,2,-11,0x35435f,true);box(.5,3,22,LAB_X-12,1.5,0,0x35435f,true);box(.5,3,22,LAB_X+12,1.5,0,0x35435f,true);label('INTERNATIONAL ALIEN LAB',LAB_X,5,-10,'#8fffe6',1.3);box(4,1.2,2,LAB_X,.8,-5,0x3d8192,true);box(3,.12,1.8,LAB_X,1.5,-5,0x82e6ed);label('STUDY ALIENS',LAB_X,3.2,-5,'#afffe7',.75);box(4,.15,3,LAB_X,.3,8,0x73b3ff);label('RETURN TO FACTORY',LAB_X,1.5,8,'#cce5ff',.65);
+box(44,.3,36,LAB_X,0,0,0x9caec5);
+box(44,4,.5,LAB_X,2,-18,0x35435f,true);
+for(const x of [LAB_X-22,LAB_X+22])box(.5,2,36,x,1,0,0x35435f,true);
+label('INTERNATIONAL ALIEN LAB',LAB_X,5,-16,'#8fffe6',1.3);box(4,1.2,2,LAB_X,.8,-5,0x3d8192,true);box(3,.12,1.8,LAB_X,1.5,-5,0x82e6ed);label('STUDY ALIENS',LAB_X,3.2,-5,'#afffe7',.75);box(4,.15,3,LAB_X,.3,8,0x73b3ff);label('RETURN TO FACTORY',LAB_X,1.5,8,'#cce5ff',.65);
 for(const x of [LAB_X-8,LAB_X+8]){const tank=new THREE.Mesh(new THREE.CylinderGeometry(1,1,3,48),new THREE.MeshStandardMaterial({color:0x74edc2,transparent:true,opacity:.45}));tank.position.set(x,1.8,-6);scene.add(tank);}
 let location='earth',netEquipped=false,guide='Materials',flight=null,cargoFlying=false;
 const player=new THREE.Group();player.position.set(0,0,9);scene.add(player);
@@ -185,7 +188,7 @@ function updateHUD(){
  rocketPurchaseLabel.visible=!state.rocket;
  rocketLaunchLabel.visible=state.rocket;
  $('career').textContent=state.deliveries+' deliveries · '+state.crystals.length+'/8 crystals · '+state.surveys.length+'/'+surveySites.length+' outposts'+(state.salvage?' · Salvage crate':'');
- $('location').textContent=location==='earth'?'The Factory · Earth':'International Alien Lab';$('netToggle').hidden=!state.net;$('netToggle').textContent=netEquipped?'Put net away':'Equip net';handNet.visible=netEquipped;netStand.visible=!state.net;netSign.visible=!state.net;$('alienCount').textContent=state.aliens.reduce((a,b)=>a+b,0)+' / 6';$('alienInventory').replaceChildren();alienTypes.forEach((a,i)=>{const row=document.createElement('div');row.textContent=a.name+' × '+state.aliens[i]+' · Studied '+state.alienStudies[i];$('alienInventory').append(row);});
+ $('location').textContent=cargoFlying?'Orbital cargo route':location==='earth'?'The Factory · Earth':'International Alien Lab';$('netToggle').hidden=!state.net;$('netToggle').textContent=netEquipped?'Put net away':'Equip net';handNet.visible=netEquipped;netStand.visible=!state.net;netSign.visible=!state.net;$('alienCount').textContent=state.aliens.reduce((a,b)=>a+b,0)+' / 6';$('alienInventory').replaceChildren();alienTypes.forEach((a,i)=>{const row=document.createElement('div');row.textContent=a.name+' × '+state.aliens[i]+' · Studied '+state.alienStudies[i];$('alienInventory').append(row);});
  $('money').textContent=state.money.toLocaleString('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0});const total=state.bag.reduce((a,b)=>a+b,0);$('bag').textContent='Backpack · '+total+' / '+capacity(state);$('materials').replaceChildren();materials.forEach((m,i)=>{const row=document.createElement('div');row.textContent=m.name+' × '+state.bag[i]+' · $'+materialValue(state,i)+(state.studied[i]?' ★':'');$('materials').append(row);});claim.visible=!state.claimed;claimLabel.visible=!state.claimed;purchase.visible=state.claimed&&!state.conveyor;purchaseLabel.visible=purchase.visible;conveyor.visible=state.conveyor;$('objective').textContent=guide==='Expedition'&&state.conveyor?(state.surveys.length===surveySites.length?(state.salvage?'Deliver salvage at the dispatch desk':'Pick up a salvage crate'):'Survey outposts · '+state.surveys.length+'/'+surveySites.length):guide==='Crystals'?(state.crystals.length===adventure.crystals.length?'All energy crystals found':'Find energy crystals · '+state.crystals.length+'/8'):guide==='Deliveries'&&state.conveyor?'Ship materials at the dispatch desk':location==='lab'?(state.aliens.some(n=>n)?'Study your captured aliens':state.relays.length<stationRelays.length?'Restore station relays · '+state.relays.length+'/'+stationRelays.length:'Visit the Ship Blueprint Roller'):guide==='Aliens'&&state.conveyor?(!state.net?'Collect the alien net':state.aliens.some(n=>n)?state.rocket?'Ride rocket to alien lab':'Save $1,000 for the rocket':'Equip net and catch aliens'):!state.claimed?'Claim your factory':!state.conveyor?'Buy a conveyor · $500':total?'Put materials in the funnel':'Collect materials outside';
  if(cargoFlying)$('objective').textContent='Deliver cargo to '+cargoDestinations[state.cargoRun.order].name;
  else if(state.cargoRun&&location==='earth')$('objective').textContent='Resume cargo flight at dispatch';
@@ -203,7 +206,7 @@ function interact(nearbyAction=nearby){const nearby=nearbyAction;if(!nearby||mod
  const payout=deliverCargo(state);
  playSound('reward');
  endCargoFlight();
- movePlayerTo(destination.x,destination.z);
+ movePlayerTo(stationHangar.x,stationHangar.z);
  updateHUD();
  persist();
  notify('Cargo delivered to '+destination.name+'! +$'+payout.toLocaleString());
@@ -303,6 +306,7 @@ function endCargoFlight(){
 function launchCargoFlight(){
  playSound('launch');
  $('dispatch').close();
+ arrive('lab');
  keys.clear();
  standingPad=null;
  movePlayerTo(cargoLaunch.x,cargoLaunch.z);
@@ -445,9 +449,9 @@ addEventListener('keydown',e=>{
  if(e.code==='Space'&&e.target instanceof HTMLElement&&e.target.closest('button,a,input,select,textarea,[contenteditable]'))return;
  if(e.code==='KeyQ'&&!modalOpen()){e.preventDefault();if(!e.repeat)stunPulse();return;}if(['+','=','-','_'].includes(e.key)&&!modalOpen()){e.preventDefault();zoomCamera(e.key==='+'||e.key==='='?.8:1.25);return;}if(e.code==='Space'&&!modalOpen()){e.preventDefault();if(!e.repeat)sprint();return;}if(e.key==='Escape'){e.preventDefault();if(!e.repeat){if($('pauseMenu').open)resumeGame();else pauseGame();}return;}if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d','W','A','S','D','e','E'].includes(e.key)&&!modalOpen()){e.preventDefault();keys.add(e.key.toLowerCase());if(e.key.toLowerCase()==='e'&&!e.repeat)interact();}});addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));addEventListener('blur',()=>keys.clear());document.addEventListener('visibilitychange',()=>keys.clear());
 for(const button of document.querySelectorAll('[data-move]')){button.onpointerdown=e=>{e.preventDefault();button.setPointerCapture(e.pointerId);keys.add(button.dataset.move.toLowerCase());};for(const event of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(event,()=>keys.delete(button.dataset.move.toLowerCase()));}
-function canMove(x,z){if(location==='lab'?(Math.abs(x-LAB_X)>11.3||Math.abs(z)>10.3):(x<EARTH_BOUNDS.minX||x>EARTH_BOUNDS.maxX||z<EARTH_BOUNDS.minZ||z>EARTH_BOUNDS.maxZ))return false;return cargoFlying||!colliders.some(c=>{if(!state.conveyor&&((c.x>=1&&c.x<=5)||c.x===0&&c.z===-3))return false;return Math.abs(x-c.x)<c.w/2+.4&&Math.abs(z-c.z)<c.d/2+.4;});}
+function canMove(x,z){if(location==='lab'?(Math.abs(x-LAB_X)>(cargoFlying?orbitLimit:stationBounds.x-.7)||Math.abs(z)>(cargoFlying?orbitLimit:stationBounds.z-.7)):(x<EARTH_BOUNDS.minX||x>EARTH_BOUNDS.maxX||z<EARTH_BOUNDS.minZ||z>EARTH_BOUNDS.maxZ))return false;return cargoFlying||!colliders.some(c=>{if(!state.conveyor&&((c.x>=1&&c.x<=5)||c.x===0&&c.z===-3))return false;return Math.abs(x-c.x)<c.w/2+.4&&Math.abs(z-c.z)<c.d/2+.4;});}
 const syncPlayers=connectWorld({
- THREE,scene,label,status:$('worldStatus'),labX:LAB_X,bounds:EARTH_BOUNDS,
+ THREE,scene,label,status:$('worldStatus'),labX:LAB_X,orbitLimit,bounds:EARTH_BOUNDS,
  readPosition:()=>({zone:location,x:player.position.x,z:player.position.z,yaw:player.rotation.y,...avatarProfile()})
 });
 function tick(realNow){const dt=Math.min((realNow-last)/1000,.05);last=realNow;syncPlayers(realNow,dt);if($('pauseMenu').open){renderer.render(scene,camera);requestAnimationFrame(tick);return;}const now=gameNow+=dt*1000;let dx=0,dz=0;if(!modalOpen()){dx=(keys.has('d')||keys.has('arrowright')?1:0)-(keys.has('a')||keys.has('arrowleft')?1:0);dz=(keys.has('s')||keys.has('arrowdown')?1:0)-(keys.has('w')||keys.has('arrowup')?1:0);}const forward=new THREE.Vector3();camera.getWorldDirection(forward);forward.y=0;forward.normalize();const right=new THREE.Vector3().crossVectors(forward,new THREE.Vector3(0,1,0));const move=right.multiplyScalar(dx).addScaledVector(forward,-dz);dx=move.x;dz=move.z;

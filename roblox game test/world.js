@@ -9,11 +9,14 @@ export const surveySites = [
  {name:'North Quarry',x:46,z:-90,color:0xb2b4a6},
  {name:'Salvage Yard',x:103,z:56,color:0xe2b778}
 ];
-export const cargoLaunch = {x:-16,z:8};
+export const stationBounds = {x:22,z:18};
+export const orbitLimit = 85;
+export const cargoLaunch = {x:LAB_X+25,z:8};
+export const stationHangar = {x:LAB_X+17,z:8};
 export const cargoDestinations = [
- {name:'Copper Ridge',x:56,z:-24},
- {name:'North Quarry',x:46,z:-74},
- {name:'Salvage Yard',x:103,z:73}
+ {name:'Beacon Alpha',x:LAB_X+56,z:-24},
+ {name:'Lunar Depot',x:LAB_X-46,z:-58},
+ {name:'Kepler Relay',x:LAB_X+37,z:61}
 ];
 // World decoration and lightweight effects; gameplay rules stay in state.js.
 export function buildAdventureWorld({THREE,scene,box,label,player}){
@@ -26,8 +29,14 @@ export function buildAdventureWorld({THREE,scene,box,label,player}){
   ring(x,z,2.4,0x78dcff,.23);
   label(name.toUpperCase()+' · CARGO',x,2.3,z,'#c2f3ff',.75);
  }
- box(6,.16,6,cargoLaunch.x,.1,cargoLaunch.z,0x37536d);
- label('CARGO LAUNCH',cargoLaunch.x,2.2,cargoLaunch.z,'#c2f3ff',.7);
+ box(7,.16,7,stationHangar.x,.21,stationHangar.z,0x37536d);
+ ring(stationHangar.x,stationHangar.z,2.8,0x78dcff,.32);
+ label('CARGO HANGAR',stationHangar.x,2.5,stationHangar.z,'#c2f3ff',.8);
+ for(const x of [LAB_X-20,LAB_X+20]){
+  box(.15,.05,31,x,.19,0,0x78dcff);
+  for(const z of [-13,0,13])box(2.7,.15,2.7,x,.23,z,0x405771);
+ }
+ label('OBSERVATION DECK',LAB_X-16,2.5,8,'#c2f3ff',.85);
  // Color-coded industrial campus with lit pathways, planters and loading bays.
  box(24,.07,.15,0,.27,-15.5,0x54eee0);box(24,.07,.15,0,.27,3.5,0xffd66b);
  for(const x of [-11.5,11.5])box(.15,.07,19,x,.27,-6,0x54eee0);
@@ -100,8 +109,8 @@ export function buildAdventureWorld({THREE,scene,box,label,player}){
   label('RELAY '+(index+1),x,1.65,z,'#e3edff',.5);
   return ring(x,z,.86,0xffb766,.35);
  });
- const planet=mesh(new THREE.IcosahedronGeometry(5,7),0x327db5,LAB_X,9,-29);const land=mesh(new THREE.IcosahedronGeometry(5.04,1),0x6bc9a5,LAB_X,9,-29);land.scale.set(.6,1,.97);animated.push({kind:'planet',m:planet},{kind:'planet',m:land});
- const stars=new THREE.BufferGeometry();const starPositions=[];for(let i=0;i<170;i++){const a=i*2.399963,r=22+i%18;starPositions.push(LAB_X+Math.cos(a)*r,7+i%23,Math.sin(a)*r);}stars.setAttribute('position',new THREE.Float32BufferAttribute(starPositions,3));scene.add(new THREE.Points(stars,new THREE.PointsMaterial({color:0xc6f5ff,size:.14,sizeAttenuation:true})));
+ const planet=mesh(new THREE.IcosahedronGeometry(5,7),0x327db5,LAB_X-34,18,-108);const land=mesh(new THREE.IcosahedronGeometry(5.04,1),0x6bc9a5,LAB_X-34,18,-108);land.scale.set(.6,1,.97);animated.push({kind:'planet',m:planet},{kind:'planet',m:land});
+ const stars=new THREE.BufferGeometry();const starPositions=[];for(let i=0;i<300;i++){const a=i*2.399963,r=25+i%94;starPositions.push(LAB_X+Math.cos(a)*r,7+i%23,Math.sin(a)*r);}stars.setAttribute('position',new THREE.Float32BufferAttribute(starPositions,3));scene.add(new THREE.Points(stars,new THREE.PointsMaterial({color:0xc6f5ff,size:.14,sizeAttenuation:true})));
  const crystalPositions=[[-18,7,'earth'],[29,-12,'earth'],[-26,28,'earth'],[10,33,'earth'],[-29,-1,'earth'],[LAB_X-9,7,'lab'],[LAB_X+9,2,'lab'],[LAB_X+5,-8,'lab']];
  const crystals=crystalPositions.map(([x,z,region],id)=>{const m=mesh(new THREE.OctahedronGeometry(.55,0),region==='earth'?0x71ffe1:0xe4a7ff,x,1.1,z,true);const marker=ring(x,z,.8,region==='earth'?0x71ffe1:0xe4a7ff);return {id,x,z,region,m,marker};});
  // Companion's body and eyes follow the player; owned through the upgrade shop.

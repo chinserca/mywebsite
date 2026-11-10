@@ -2,7 +2,7 @@ import {attachAvatar} from './avatar.js?v=station';
 const playerId = crypto.randomUUID();
 const expiryMs = 12000;
 
-export function connectWorld({THREE,scene,label,status,readPosition,labX,bounds}){
+export function connectWorld({THREE,scene,label,status,readPosition,labX,orbitLimit,bounds}){
  const peers=new Map();
  let online=false,pending=false,lastSent=-5000,lastPosition=null,attempted=false;
  const geometry=new THREE.BoxGeometry(1,1,1);
@@ -25,7 +25,7 @@ export function connectWorld({THREE,scene,label,status,readPosition,labX,bounds}
   if(![x,z,yaw].every(Number.isFinite)||Math.abs(yaw)>10)return;
   if(zone==='earth'){
    if(x<bounds.minX||x>bounds.maxX||z<bounds.minZ||z>bounds.maxZ)return;
-  }else if(zone!=='lab'||Math.abs(x-labX)>12||Math.abs(z)>11)return;
+  }else if(zone!=='lab'||Math.abs(x-labX)>orbitLimit||Math.abs(z)>orbitLimit)return;
   const name=typeof payload.username==='string'&&/^[a-zA-Z0-9_]{3,20}$/.test(payload.username)?payload.username:'PLAYER '+id.slice(0,4).toUpperCase();
   let peer=peers.get(id);
   if(!peer){
