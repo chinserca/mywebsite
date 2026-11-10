@@ -1,11 +1,19 @@
 import {alienTypes,hybridTypes,combineCells} from './state.js?v=genetics';
 
 const tools = [
- {name:'Notebook',steps:['Record observation']},
- {name:'Cell Extractor',steps:['Sterilize extractor','Take cell sample','Seal sample vial']},
- {name:'Compound Microscope',steps:['Place slide','Adjust focus','Examine cells']},
- {name:'Cell Scanner',steps:['Scan cell signature']}
+ {name:'Notebook',icon:'▤',stations:['specimen','log']},
+ {name:'Cell Extractor',icon:'◈',stations:['sterilizer','specimen','vial','sealer']},
+ {name:'Compound Microscope',icon:'◉',stations:['specimen','focus','log']},
+ {name:'Cell Scanner',icon:'⌁',stations:['specimen','log']}
 ];
+const workstations = {
+ specimen:['✦','Specimen tray'],
+ sterilizer:['♨','Sterilizer'],
+ vial:['◊','Empty vial'],
+ sealer:['⬡','Vial sealer'],
+ focus:['◎','Focus ring'],
+ log:['▤','Research log']
+};
 
 function button(text, action){
  const control=document.createElement('button');
@@ -48,47 +56,128 @@ export function setupGenetics({dialog,state,save}){
    return;
   }
   const specimen=select('Alien',available);
-  const tool=select('Tool',tools.map(({name},index)=>[name,index]));
+  const rack=document.createElement('div');
+  rack.className='lab-tool-rack';
+  const bench=document.createElement('div');
+  bench.className='lab-bench';
+  const instruction=document.createElement('p');
+  instruction.className='lab-instruction';
   const inventoryList=inventory();
+  let selected=null;
   let step=0;
-  const action=button('',()=>{
-   const index=Number(specimen.control.value);
-   if(!state.aliens[index])return;
-   const toolIndex=Number(tool.control.value);
-   const {steps}=tools[toolIndex];
-   step++;
-   if(step<steps.length){
-    status.textContent='Step complete. Next: '+steps[step]+'.';
-    action.textContent=steps[step];
+
+  const pads=Object.entries(workstations).map(([id,[icon,name]])=>{
+   const pad=button(icon+' '+name,()=>place(selected,id));
+   pad.dataset.station=id;
+   return pad;
+  });
+  bench.append(...pads);
+
+  function showProgress(){
+   const next=selected?.stations[step];
+   instruction.textContent=next
+    ? 'Step '+(step+1)+' of '+selected.stations.length+' · Move '+selected.name+' to '+workstations[next][1]+'.'
+    : 'Drag a floating tool onto the bench, or select a tool and tap a station.';
+   for(const pad of pads)pad.classList.toggle('lab-next',pad.dataset.station===next);
+   tools.forEach((tool,index)=>rack.children[index].setAttribute('aria-pressed',String(tool===selected)));
+  }
+
+  function choose(tool){
+   if(selected===tool)return;
+   selected=tool;
+   step=0;
+   status.textContent='';
+   showProgress();
+  }
+
+  function place(tool, station){
+   if(!tool){
+    status.textContent='Choose a tool from the floating rack first.';
     return;
    }
+   choose(tool);
+   if(station!==tool.stations[step]){
+    status.textContent='That station is for a different step. Follow the highlighted pad.';
+    return;
+   }
+   step++;
+   if(step<tool.stations.length){
+    status.textContent=workstations[station][1]+' complete.';
+    showProgress();
+    return;
+   }
+   const index=Number(specimen.control.value);
+   if(!state.aliens[index])return;
    const name=alienTypes[index].name;
-   if(toolIndex===0){
+   if(tool.name==='Notebook'){
     state.notes[index]=true;
     status.textContent='Observation saved for '+name+'.';
     save('pickup');
-   }else if(toolIndex===1){
+   }else if(tool.name==='Cell Extractor'){
     state.cells[index]++;
-    status.textContent='Added one '+name+' cell vial to your inventory.';
+    status.textContent='Sealed one '+name+' cell vial and added it to your inventory.';
     inventoryList.replaceChildren(...inventory().children);
     save('pickup');
-   }else if(toolIndex===2){
+   }else if(tool.name==='Compound Microscope'){
     status.textContent=name+' cells are active and suitable for fusion.';
    }else{
     const matches=hybridTypes.filter(type=>type.parents.includes(index)).map(type=>type.name);
     status.textContent='Possible hybrids: '+matches.join(', ')+'.';
    }
+   selected=null;
    step=0;
-   action.textContent=steps[0];
-  });
-  function reset(){
-   step=0;
-   action.textContent=tools[Number(tool.control.value)].steps[0];
-   status.textContent=state.notes[Number(specimen.control.value)]?'Notebook observation on file.':'';
+   showProgress();
   }
-  specimen.control.onchange=tool.control.onchange=reset;
-  reset();
-  content.replaceChildren(specimen.wrapper,tool.wrapper,action,inventoryList);
+
+  tools.forEach((tool,index)=>{
+   let drag=null;
+   let dragged=false;
+   const tile=button(tool.icon+' '+tool.name,()=>{
+    if(!dragged)choose(tool);
+    dragged=false;
+   });
+   tile.setAttribute('aria-label',tool.name);
+   tile.style.setProperty('--float-delay',-index*.41+'s');
+   tile.onpointerdown=event=>{
+    if(!event.isPrimary||event.button!==0)return;
+    dragged=false;
+    drag={id:event.pointerId,x:event.clientX,y:event.clientY,ghost:null};
+    tile.setPointerCapture(event.pointerId);
+   };
+   tile.onpointermove=event=>{
+    if(drag?.id!==event.pointerId)return;
+    if(!drag.ghost){
+     if(Math.hypot(event.clientX-drag.x,event.clientY-drag.y)<6)return;
+     dragged=true;
+     choose(tool);
+     drag.ghost=document.createElement('span');
+     drag.ghost.className='lab-tool-ghost';
+     drag.ghost.textContent=tile.textContent;
+     dialog.append(drag.ghost);
+    }
+    drag.ghost.style.left=event.clientX+'px';
+    drag.ghost.style.top=event.clientY+'px';
+   };
+   function finish(event){
+    if(drag?.id!==event.pointerId)return;
+    drag.ghost?.remove();
+    drag=null;
+    if(event.type!=='pointerup'||!dragged)return;
+    const pad=document.elementFromPoint(event.clientX,event.clientY)?.closest('[data-station]');
+    if(pad&&bench.contains(pad))place(tool,pad.dataset.station);
+   }
+   tile.onpointerup=tile.onpointercancel=tile.onlostpointercapture=finish;
+   rack.append(tile);
+  });
+
+  specimen.control.onchange=()=>{
+   selected=null;
+   step=0;
+   status.textContent=state.notes[Number(specimen.control.value)]?'Notebook observation on file.':'';
+   showProgress();
+  };
+  showProgress();
+  content.replaceChildren(specimen.wrapper,rack,instruction,bench,inventoryList);
  }
 
  function fusion(){

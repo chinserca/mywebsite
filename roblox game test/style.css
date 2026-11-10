@@ -41,3 +41,54 @@
   font: inherit;
   max-width: 100%;
 }
+
+.lab-tool-rack,
+.lab-bench {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.lab-tool-rack {
+  padding: 12px;
+  border-radius: 12px;
+  background: #142e45;
+}
+.lab-tool-rack button {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  animation: lab-tool-float 2.4s ease-in-out var(--float-delay) infinite alternate;
+}
+.lab-tool-rack button[aria-pressed="true"] {
+  background: #80edd9;
+  color: #122d41;
+}
+@keyframes lab-tool-float {
+  to { transform: translateY(-5px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lab-tool-rack button { animation: none; }
+}
+.lab-instruction { min-height: 2.8em; }
+.lab-bench button {
+  min-height: 48px;
+  background: #1e3d55;
+  color: #eefaff;
+  border: 2px dashed #6598b3;
+}
+.lab-bench button.lab-next {
+  background: #244d62;
+  border-color: #8df7d8;
+  box-shadow: inset 0 0 12px #8df7d842;
+}
+.lab-tool-ghost {
+  position: fixed;
+  z-index: 1;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  background: #8df7d8;
+  color: #122d41;
+  border-radius: 8px;
+  padding: 8px 12px;
+  white-space: nowrap;
+}
