@@ -1,4 +1,4 @@
-import {setupGenetics} from './genetics.js?v=workbench';
+import {setupGenetics} from './genetics.js?v=lab-views';
 import {setupGameAudio} from './audio.js';
 import {connectWorld} from './multiplayer.js?v=orbital';
 import {attachAvatar,setupAvatar} from './avatar.js?v=station';

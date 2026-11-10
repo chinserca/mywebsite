@@ -92,3 +92,50 @@
   padding: 8px 12px;
   white-space: nowrap;
 }
+
+.lab-tool-view {
+  margin: 14px 0;
+  padding: 12px;
+  border: 1px solid #5c88a1;
+  border-radius: 12px;
+  background: #112a40;
+}
+.lab-tool-view h3 { margin: 0 0 10px; color: var(--specimen-color); }
+.lab-lens {
+  position: relative;
+  width: min(172px, 100%);
+  aspect-ratio: 1;
+  overflow: hidden;
+  margin: auto;
+  border: 4px solid #668b9c;
+  border-radius: 50%;
+  background: radial-gradient(circle, #24444e, #081826 80%);
+}
+.lab-slide { position: absolute; inset: 0; }
+.lab-unfocused { filter: blur(4px); }
+.lab-slide i {
+  position: absolute;
+  width: 26%;
+  height: 19%;
+  border: 2px solid var(--specimen-color);
+  border-radius: 48% 52% 61% 39%;
+  background: radial-gradient(ellipse, #f1faff 0 14%, var(--specimen-color) 19%, #243f60 65%);
+  box-shadow: 0 0 8px var(--specimen-color);
+  transform: translate(-50%, -50%);
+}
+.lab-notebook {
+  color: #233a4b;
+  border-radius: 6px;
+  padding: 8px 14px;
+  background: repeating-linear-gradient(#fff1cf 0 23px, #dbcaa5 24px);
+}
+.lab-notebook p { color: inherit; line-height: 24px; margin: 0; }
+.lab-scan {
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: space-evenly;
+  background: repeating-linear-gradient(0deg, #0e2134 0 11px, #274657 12px);
+}
+.lab-scan i { width: 3%; background: var(--specimen-color); border-radius: 3px; }
+.lab-scan-idle i { opacity: .18; transform: scaleY(.09); }
