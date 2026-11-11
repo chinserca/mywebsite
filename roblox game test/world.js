@@ -10,6 +10,13 @@ export const surveySites = [
  {name:'Salvage Yard',x:103,z:56,color:0xe2b778}
 ];
 export const stationBounds = {x:22,minZ:-60,maxZ:18};
+export const recorderSites=[{x:75,z:-23},{x:-57,z:-35},{x:0,z:87}];
+export const recorderTerminal={x:LAB_X+16,z:-26};
+export const telescopeSites=[
+ {name:'Earth',x:LAB_X-14,z:12},
+ {name:'Lunar Depot',x:LAB_X+16,z:-46},
+ {name:'Kepler Relay',x:LAB_X+11,z:-55}
+];
 export const orbitLimit = 85;
 export const cargoLaunch = {x:LAB_X+25,z:8};
 export const stationHangar = {x:LAB_X+17,z:8};
@@ -37,6 +44,19 @@ export function buildAdventureWorld({THREE,scene,box,label,player}){
   for(const z of [-13,0,13])box(2.7,.15,2.7,x,.23,z,0x405771);
  }
  label('OBSERVATION DECK',LAB_X-16,2.5,8,'#c2f3ff',.85);
+ const recorders=recorderSites.map(({x,z})=>{
+  const caseMesh=box(1.1,.75,.85,x,.48,z,0xf7a04d);
+  const marker=label('FLIGHT RECORDER',x,1.8,z,'#ffe0a2',.56);
+  return {caseMesh,marker};
+ });
+ for(const {x,z,name} of telescopeSites){
+  ring(x,z,1.25,0xc5a8ff,.24);
+  const scope=mesh(new THREE.CylinderGeometry(.28,.38,1.6,20),0x9cb4d2,x,1,z-.95);
+  scope.rotation.x=-Math.PI/3;
+  label(name.toUpperCase()+' · TELESCOPE',x,2,z,'#ebd6ff',.61);
+ }
+ box(2.8,1.15,1,recorderTerminal.x,.74,recorderTerminal.z-1.3,0x3f7193);
+ label('FLIGHT DATA TERMINAL',recorderTerminal.x,2.4,recorderTerminal.z,'#a2ecff',.72);
  // Color-coded industrial campus with lit pathways, planters and loading bays.
  box(24,.07,.15,0,.27,-15.5,0x54eee0);box(24,.07,.15,0,.27,3.5,0xffd66b);
  for(const x of [-11.5,11.5])box(.15,.07,19,x,.27,-6,0x54eee0);
@@ -123,6 +143,7 @@ export function buildAdventureWorld({THREE,scene,box,label,player}){
    light.material.color.setHex(color);
    light.material.emissive.setHex(color);
   });
+  recorders.forEach(({caseMesh,marker},index)=>caseMesh.visible=marker.visible=!state.recorders.includes(index));
   for(const c of crystals){c.m.visible=c.marker.visible=!state.crystals.includes(c.id);c.m.rotation.y=now*.001;c.m.position.y=1.1+Math.sin(now*.003+c.id)*.25;}
   for(const a of animated){if(a.kind==='steam'){const t=(now*.00035+a.offset/3)%1;a.m.position.set(a.x+t*.8,6+t*5,-15);a.m.scale.setScalar(.5+t);a.m.material.opacity=(1-t)*.35;}else if(a.kind==='specimen'){a.m.rotation.y=now*.001;a.m.position.y=1.8+Math.sin(now*.003)*.2;}else a.m.rotation.y=now*.00007;}
   drone.visible=!!state.upgrades.drone;if(drone.visible){const desired=player.position.clone().add(new THREE.Vector3(-1.5,2.7+Math.sin(now*.004)*.15,1));if(drone.position.distanceTo(desired)>25)drone.position.copy(desired);else drone.position.lerp(desired,1-Math.exp(-dt*5));drone.rotation.y=now*.0005;propeller.rotation.y=now*.045;}

@@ -29,7 +29,7 @@ export function repairRelay(state, index) {
 }
 
 export const materials=[{name:'PLA',color:0xffca55,value:65},{name:'TPU',color:0xb18aff,value:85},{name:'Metal',color:0xadb8c3,value:150},{name:'PETG',color:0x48d8c5,value:80},{name:'PETG-CF',color:0x387c9b,value:120},{name:'PLA-CF',color:0x526078,value:110},{name:'TPU-CF',color:0x975b91,value:130}];
-export function newState(){return {money:1000,claimed:false,conveyor:false,bag:materials.map(()=>0),studied:materials.map(()=>false),upgrades:{backpack:false,speed:false,processor:false,drone:false,shield:false},rocket:false,net:false,aliens:[0,0,0],alienStudies:[0,0,0],deliveries:0,crystals:[],surveys:[],salvage:false,blueprints:blueprintTiers.map(()=>0),relays:[],ships:blueprintTiers.map(()=>false),cargoRun:null,cells:[0,0,0],hybrids:[0,0,0],notes:[false,false,false]};}
+export function newState(){return {money:1000,claimed:false,conveyor:false,bag:materials.map(()=>0),studied:materials.map(()=>false),upgrades:{backpack:false,speed:false,processor:false,drone:false,shield:false},rocket:false,net:false,aliens:[0,0,0],alienStudies:[0,0,0],deliveries:0,crystals:[],surveys:[],salvage:false,blueprints:blueprintTiers.map(()=>0),relays:[],ships:blueprintTiers.map(()=>false),cargoRun:null,cells:[0,0,0],hybrids:[0,0,0],notes:[false,false,false],recorders:[],recordersSubmitted:false,skySurvey:[]};}
 export const alienTypes=[{name:'Jade Hopper',color:0x7bef9f},{name:'Violet Floater',color:0xb795ff},{name:'Solar Sprout',color:0xffbd64}];
 export const hybridTypes=[
  {name:'Amethyst Hopper',color:0xa58bff,parents:[0,1]},
@@ -47,7 +47,11 @@ export function combineCells(state, first, second){
  return hybridTypes[index];
 }
 
-export function validSpaceState(s){return ['cells','hybrids'].every(key=>s[key]===undefined||Array.isArray(s[key])&&s[key].length===3&&s[key].every(n=>Number.isSafeInteger(n)&&n>=0))
+export function validSpaceState(s){
+ const validSites=key=>s[key]===undefined||Array.isArray(s[key])&&s[key].every(id=>Number.isInteger(id)&&id>=0&&id<3)&&new Set(s[key]).size===s[key].length;
+ if(!validSites('recorders')||!validSites('skySurvey'))return false;
+ if(s.recordersSubmitted!==undefined&&(typeof s.recordersSubmitted!=='boolean'||s.recordersSubmitted&&s.recorders?.length!==3))return false;
+return ['cells','hybrids'].every(key=>s[key]===undefined||Array.isArray(s[key])&&s[key].length===3&&s[key].every(n=>Number.isSafeInteger(n)&&n>=0))
  &&(s.notes===undefined||Array.isArray(s.notes)&&s.notes.length===3&&s.notes.every(n=>typeof n==='boolean'))
  &&(s.ships===undefined||Array.isArray(s.ships)&&s.ships.length===blueprintTiers.length&&s.ships.every(ship=>typeof ship==='boolean'))
  &&(s.cargoRun==null||s.conveyor&&Number.isInteger(s.cargoRun.order)&&orders[s.cargoRun.order]&&Number.isInteger(s.cargoRun.ship)&&s.ships?.[s.cargoRun.ship]&&Number.isSafeInteger(s.cargoRun.payout)&&s.cargoRun.payout>0)
@@ -84,6 +88,22 @@ export const shopItems=[{id:"shield",name:"Field shield",price:650,description:"
 export function capacity(s){return s.upgrades?.backpack?12:8;}
 export function materialValue(s,i){return Math.round(materials[i].value*(s.studied?.[i]?1.5:1)*(s.upgrades?.processor?1.25:1));}
 export function act(s,action,index){
+ if(action==='recoverRecorder'&&s.conveyor&&Number.isInteger(index)&&index>=0&&index<3&&!s.recorders.includes(index)){
+  s.recorders.push(index);
+  return 'Flight recorder recovered · '+s.recorders.length+'/3';
+ }
+ if(action==='submitRecorders'&&s.rocket&&s.recorders.length===3&&!s.recordersSubmitted){
+  s.recordersSubmitted=true;
+  s.money+=1800;
+  return 'Flight recorders analyzed! +$1,800';
+ }
+ if(action==='observeSky'&&s.rocket&&Number.isInteger(index)&&index>=0&&index<3&&!s.skySurvey.includes(index)){
+  s.skySurvey.push(index);
+  const finished=s.skySurvey.length===3;
+  s.money+=finished?800:200;
+  return finished?'Sky survey complete! +$800':'Observation saved! +$200';
+ }
+
  if(action==='survey'&&s.conveyor&&Number.isInteger(index)&&index>=0&&index<5&&!s.surveys?.includes(index)){
   s.surveys??=[];
   s.surveys.push(index);
