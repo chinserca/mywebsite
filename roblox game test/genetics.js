@@ -1,4 +1,4 @@
-import {alienTypes,hybridTypes,combineCells} from './state.js?v=fieldwork';
+import {alienTypes,hybridTypes,combineCells} from './state.js?v=filament';
 
 const tools = [
  {name:'Notebook',icon:'▤',stations:['specimen','log']},

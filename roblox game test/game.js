@@ -6,7 +6,7 @@ import {buildAdventureWorld, LAB_X, EARTH_BOUNDS, surveySites, blueprintRoller, 
 import {setupMouseLock} from './mouse-lock.js';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
-import {materials,newState,validState,act,materialValue,capacity,shopItems,alienTypes,hybridTypes,orders,orderValue,blueprintPrice,blueprintTiers,rollBlueprint,repairRelay,buildShip,loadCargo,deliverCargo} from './state.js?v=fieldwork';
+import {materials,newState,validState,act,materialValue,capacity,shopItems,alienTypes,hybridTypes,orders,orderValue,blueprintPrice,blueprintTiers,rollBlueprint,repairRelay,buildShip,loadCargo,deliverCargo} from './state.js?v=filament';
 const $=id=>document.getElementById(id),saveKey='the-factory-v1';let state=newState();
 try{const saved=JSON.parse(localStorage.getItem(saveKey));if(validState(saved))state={...newState(),...saved,upgrades:{...newState().upgrades,...saved.upgrades},studied:saved.studied??materials.map(()=>false)};}catch{}
 const playSound=setupGameAudio({button:$('soundToggle'),music:$('factoryMusic'),help:$('instructions'),pause:$('pauseMenu')});
@@ -47,6 +47,20 @@ machineBox(3,.4,9,3,1,-7,0x273c50);machineBox(.2,.5,9,1.4,1.2,-7,0xe0b552);machi
 for(const x of [2,4])for(const z of [-10,-4])machineBox(.25,1,.25,x,.5,z,0x60707e);
 const rollers=[];for(let z=-10.8;z<-2.6;z+=.6){const m=box(2.6,.1,.13,3,1.25,z,0x748597);conveyor.attach(m);rollers.push(m);}
 const funnel=new THREE.Mesh(new THREE.CylinderGeometry(1.1,.3,1.4,4,1,true),new THREE.MeshStandardMaterial({color:0xf3a743,side:THREE.DoubleSide}));funnel.position.set(0,1.7,-3);funnel.rotation.y=Math.PI/4;scene.add(funnel);conveyor.attach(funnel);colliders.push({x:0,z:-3,w:1.8,d:1.8});const funnelLabel=label('MATERIAL FUNNEL',0,3,-3,'#ffd383',.65);conveyor.attach(funnelLabel);
+const filamentMachine=new THREE.Group();
+scene.add(filamentMachine);
+filamentMachine.attach(box(1.5,1.4,1.3,-3.5,.9,-4.9,0x376d88));
+filamentMachine.attach(box(.95,.48,.1,-3.5,1.14,-4.23,0x8debd4));
+filamentMachine.attach(label('FILAMENT MACHINE',-3.5,2.75,-4.9,'#a4f9e3',.66));
+const feedStart=new THREE.Vector3(-3.5,1.65,-4.9);
+const feedEnd=new THREE.Vector3(0,2.4,-3);
+const pipe=new THREE.Mesh(new THREE.CylinderGeometry(.12,.12,feedStart.distanceTo(feedEnd),16),
+ new THREE.MeshStandardMaterial({color:0x67a5ba}));
+pipe.position.copy(feedStart).lerp(feedEnd,.5);
+pipe.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),feedEnd.clone().sub(feedStart).normalize());
+filamentMachine.add(pipe);
+let filamentElapsed=0;
+const filamentCycle=12;
 const depositPad=box(2,.12,1,0,.29,-1.1,0x4cc9dc);conveyor.attach(depositPad);
 box(3,1.1,1.6,-7,.65,-11,0x347fba,true);box(1.2,.9,.15,-7,1.7,-11.4,0x24445e);box(.9,.6,.17,-7,1.7,-11.3,0x72e4fd);label('RESEARCH · +50% VALUE',-7,3,-11,'#87e9ff',.75);
 box(2.8,1.2,1.5,8,.7,-12,0x8356b7,true);box(2.5,.2,1.7,8,1.4,-12,0xffcf59);label('UPGRADE SHOP',8,3,-12,'#e2b4ff',.7);
@@ -239,6 +253,7 @@ const openGenetics=setupGenetics({
  save:cue=>{playSound(cue);updateHUD();persist();}
 });
 function updateHUD(){
+ filamentMachine.visible=!!state.upgrades.filamentMachine;
  const counts=[...state.aliens,...state.hybrids];
  displayModels.forEach((model,index)=>model.visible=counts[index]>0);
  rocketPurchaseLabel.visible=!state.rocket;
@@ -301,9 +316,24 @@ if(!result){notify(nearby.action==='buy'?'The conveyor costs $500.':nearby.actio
  const cue={collect:'pickup',catch:'pickup',mine:'pickup',net:'pickup',salvage:'pickup',survey:'reward',recoverRecorder:'pickup',submitRecorders:'reward',observeSky:'reward',deposit:'reward',buy:'purchase',claim:'purchase',rocket:'purchase'}[nearby.action];
  if(cue)playSound(cue);
  if(typeof result==='object'){
-  // Pay immediately so closing the tab during the conveyor animation cannot lose materials.
-  state.money+=result.payout;notify('Materials processed! Earned $'+result.payout+'.');let n=0;result.cargo.forEach((amount,i)=>{for(let j=0;j<amount;j++){const cube=box(.45,.45,.45,3,1.6,-3,materials[i].color);cube.visible=false;processed.push({cube,start:gameNow+n++*350});}});
- }else notify(result);updateHUD();persist();}
+  processFilament(result);
+  notify('Materials processed! Earned $'+result.payout+'.');
+ }else notify(result);
+ updateHUD();
+ persist();
+}
+function processFilament({cargo,payout}){
+ // Save the payout as the filament enters the conveyor.
+ state.money+=payout;
+ let queued=0;
+ cargo.forEach((amount,index)=>{
+  for(let i=0;i<amount;i++){
+   const cube=box(.45,.45,.45,3,1.6,-3,materials[index].color);
+   cube.visible=false;
+   processed.push({cube,start:gameNow+queued++*350});
+  }
+ });
+}
 let miningReady=0;
 const stepPads = [
  ...recorderSites.map((site,index)=>({
@@ -588,6 +618,20 @@ function tick(realNow){const dt=Math.min((realNow-last)/1000,.05);last=realNow;s
  adventure.update(now,dt,state,location);$('sprint').disabled=now<sprintReady;setControlText('sprint',now<sprintReady?'Sprint · '+Math.ceil((sprintReady-now)/1000)+'s':'Sprint · Space');
  spools.forEach(s=>{if(!s.available&&now>s.next){s.available=true;s.group.visible=true;}s.group.rotation.y=now*.0005;s.group.position.y=.85+Math.sin(now*.002)*.1;});
  processed=processed.filter(item=>{const elapsed=(now-item.start)/1000;if(elapsed<0)return true;if(elapsed>3){scene.remove(item.cube);item.cube.geometry.dispose();item.cube.material.dispose();return false;}item.cube.visible=true;item.cube.position.z=-3-elapsed*2.7;return true;});
+ if(state.conveyor&&state.upgrades.filamentMachine&&!modalOpen()&&!document.hidden){
+  filamentElapsed+=dt;
+  if(filamentElapsed>=filamentCycle){
+   filamentElapsed-=filamentCycle;
+   const result=act(state,'produceFilament');
+   processFilament(result);
+   updateHUD();
+   persist();
+   if(location==='earth'&&dist(-3.5,-4.9)<15){
+    playSound('pickup');
+    notify('Filament Machine processed one PLA spool · +$'+result.payout);
+   }
+  }
+ }
  if(state.conveyor)rollers.forEach((r,i)=>r.material.color.setHex((Math.floor(now/160)+i)%2?0x748597:0x53697d));
  if(flight){const elapsed=now-flight.start;if(location==='earth')rocket.position.y=Math.min(35,elapsed/70);if(elapsed>2600){arrive(flight.destination);previous.copy(p);}}
  const delta=p.clone().sub(previous);camera.position.add(delta);orbit.target.add(delta);orbit.update();if(now>notice)$('toast').style.opacity=0;renderer.render(scene,camera);requestAnimationFrame(tick);

@@ -29,7 +29,7 @@ export function repairRelay(state, index) {
 }
 
 export const materials=[{name:'PLA',color:0xffca55,value:65},{name:'TPU',color:0xb18aff,value:85},{name:'Metal',color:0xadb8c3,value:150},{name:'PETG',color:0x48d8c5,value:80},{name:'PETG-CF',color:0x387c9b,value:120},{name:'PLA-CF',color:0x526078,value:110},{name:'TPU-CF',color:0x975b91,value:130}];
-export function newState(){return {money:1000,claimed:false,conveyor:false,bag:materials.map(()=>0),studied:materials.map(()=>false),upgrades:{backpack:false,speed:false,processor:false,drone:false,shield:false},rocket:false,net:false,aliens:[0,0,0],alienStudies:[0,0,0],deliveries:0,crystals:[],surveys:[],salvage:false,blueprints:blueprintTiers.map(()=>0),relays:[],ships:blueprintTiers.map(()=>false),cargoRun:null,cells:[0,0,0],hybrids:[0,0,0],notes:[false,false,false],recorders:[],recordersSubmitted:false,skySurvey:[]};}
+export function newState(){return {money:1000,claimed:false,conveyor:false,bag:materials.map(()=>0),studied:materials.map(()=>false),upgrades:{backpack:false,speed:false,processor:false,drone:false,shield:false,filamentMachine:false},rocket:false,net:false,aliens:[0,0,0],alienStudies:[0,0,0],deliveries:0,crystals:[],surveys:[],salvage:false,blueprints:blueprintTiers.map(()=>0),relays:[],ships:blueprintTiers.map(()=>false),cargoRun:null,cells:[0,0,0],hybrids:[0,0,0],notes:[false,false,false],recorders:[],recordersSubmitted:false,skySurvey:[]};}
 export const alienTypes=[{name:'Jade Hopper',color:0x7bef9f},{name:'Violet Floater',color:0xb795ff},{name:'Solar Sprout',color:0xffbd64}];
 export const hybridTypes=[
  {name:'Amethyst Hopper',color:0xa58bff,parents:[0,1]},
@@ -48,6 +48,7 @@ export function combineCells(state, first, second){
 }
 
 export function validSpaceState(s){
+ if(s.upgrades?.filamentMachine!==undefined&&typeof s.upgrades.filamentMachine!=='boolean')return false;
  const validSites=key=>s[key]===undefined||Array.isArray(s[key])&&s[key].every(id=>Number.isInteger(id)&&id>=0&&id<3)&&new Set(s[key]).size===s[key].length;
  if(!validSites('recorders')||!validSites('skySurvey'))return false;
  if(s.recordersSubmitted!==undefined&&(typeof s.recordersSubmitted!=='boolean'||s.recordersSubmitted&&s.recorders?.length!==3))return false;
@@ -84,10 +85,14 @@ export function deliverCargo(state){
  state.cargoRun=null;
  return run.payout;
 }
-export const shopItems=[{id:"shield",name:"Field shield",price:650,description:"Reduces alien damage by half."},{id:'drone',name:'BEE-BOT helper drone',price:1500,description:'A floating companion collects nearby materials within 5 steps.'},{id:'backpack',name:'Bigger backpack',price:250,description:'Carry 12 spools instead of 8.'},{id:'speed',name:'Running boots',price:350,description:'Move 25% faster.'},{id:'processor',name:'Conveyor upgrade',price:750,description:'Earn 25% more from every material. Combines with research.'}];
+export const shopItems=[{id:"filamentMachine",name:"Filament Machine",price:1000,description:"Makes one PLA spool every 12 seconds of play and feeds it straight into the funnel."},{id:"shield",name:"Field shield",price:650,description:"Reduces alien damage by half."},{id:'drone',name:'BEE-BOT helper drone',price:1500,description:'A floating companion collects nearby materials within 5 steps.'},{id:'backpack',name:'Bigger backpack',price:250,description:'Carry 12 spools instead of 8.'},{id:'speed',name:'Running boots',price:350,description:'Move 25% faster.'},{id:'processor',name:'Conveyor upgrade',price:750,description:'Earn 25% more from every material. Combines with research.'}];
 export function capacity(s){return s.upgrades?.backpack?12:8;}
 export function materialValue(s,i){return Math.round(materials[i].value*(s.studied?.[i]?1.5:1)*(s.upgrades?.processor?1.25:1));}
 export function act(s,action,index){
+ if(action==='produceFilament'&&s.conveyor&&s.upgrades?.filamentMachine){
+  return {cargo:materials.map((_,i)=>i===0?1:0),payout:materialValue(s,0)};
+ }
+
  if(action==='recoverRecorder'&&s.conveyor&&Number.isInteger(index)&&index>=0&&index<3&&!s.recorders.includes(index)){
   s.recorders.push(index);
   return 'Flight recorder recovered · '+s.recorders.length+'/3';
