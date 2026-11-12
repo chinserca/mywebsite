@@ -244,7 +244,7 @@ function choose(config){
   boostButton.setAttribute('aria-label',config.thrusters?'Forward boost':'Descend');
   el('vehicleName').textContent=config.name;
   el('controls').textContent=config.kind==='drone'
-    ? 'WASD move · Space climb · Shift descend · Q/E turn · C change view'
+    ? 'WASD move · Space climb · Shift descend · ←/→ turn · C change view'
     : config.thrusters
       ? 'W/S accelerate or reverse · A/D steer · Space lift thrusters · Shift forward boost · C change view'
       : 'W/S accelerate or reverse · A/D steer · Space brake · C change view';
@@ -313,7 +313,7 @@ el('course').onclick=()=>{
   el('course').setAttribute('aria-pressed','true');
   showGate();
 };
-const movement=['w','a','s','d','q','e',' ','shift'];
+const movement=['w','a','s','d','arrowleft','arrowright',' ','shift'];
 addEventListener('keydown',event=>{
   if(!vehicle||event.ctrlKey||event.metaKey||event.altKey)return;
   const key=event.key.toLowerCase();
@@ -349,7 +349,7 @@ function tick(now){
     for(const flame of boostFlames)flame.visible=!!boost;
     const easing=1-Math.exp(-dt*vehicle.response);
     if(drone){
-      yaw-=direction('e','q')*dt*1.7;
+      yaw-=direction('arrowright','arrowleft')*dt*1.7;
       wish.set(direction('d','a'),0,-direction('w','s'));
       if(wish.lengthSq()>1)wish.normalize();
       wish.multiplyScalar(vehicle.speed).applyAxisAngle(up,yaw);
