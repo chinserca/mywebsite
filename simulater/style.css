@@ -1,0 +1,31 @@
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; color: #f1f7fc; background: #101d29; font: 16px system-ui,sans-serif; }
+#world { position: fixed; inset: 0; }
+#world canvas { display: block; }
+header { position: fixed; z-index: 1; top: 12px; left: 12px; right: 12px; display: flex; justify-content: space-between; }
+header a, button {
+  border: 1px solid #a8def85c; border-radius: 10px; background: #142a3e; color: inherit;
+  padding: 10px 14px; font: inherit; font-weight: 650; text-decoration: none; cursor: pointer; touch-action: manipulation;
+}
+button:hover, button:focus-visible, a:focus-visible { background: #265172; outline: 2px solid #abecff; }
+#picker { position: relative; margin: min(12vh, 100px) auto 30px; width: min(880px, calc(100% - 24px)); padding: clamp(18px, 4vw, 34px); border: 1px solid #6595b4; border-radius: 20px; background: #101f30f2; }
+h1 { margin: 0; }
+#picker h1 { font-size: clamp(27px, 6vw, 48px); }
+#picker p, #controls { color: #c2d9e6; }
+#vehicles { display: grid; grid-template-columns: repeat(auto-fit,minmax(185px,1fr)); gap: 10px; }
+#vehicles button { text-align: left; min-height: 88px; border-top: 3px solid var(--paint); }
+#vehicles span { display: block; margin-top: 5px; font-size: .86rem; font-weight: 400; color: #b9d4e3; }
+#hud { position: fixed; top: 64px; left: 12px; max-width: min(460px,calc(100% - 24px)); padding: 14px; background: #101f30e8; border-radius: 12px; }
+#hud h1 { font-size: 1.1rem; }
+#hud p { margin: 6px 0; font-size: .85rem; }
+.buttons { display: flex; flex-wrap: wrap; gap: 5px; }
+.buttons button { font-size: .8rem; padding: 7px 9px; }
+#raceStatus { color: #fcd787; }
+#touch { position: fixed; bottom: max(12px,env(safe-area-inset-bottom)); left: 12px; right: 12px; display: flex; justify-content: space-between; pointer-events: none; }
+#touch button { pointer-events: auto; touch-action: none; user-select: none; min-width: 49px; min-height: 49px; }
+.steering { display: grid; grid-template-columns: repeat(3,auto); gap: 4px; }
+.steering button:first-child { grid-column: 2; }
+.steering button:nth-child(2) { grid-column: 1; }
+.altitude { display: grid; align-content: end; gap: 4px; }
+@media (pointer:fine) { #touch { display: none; } }

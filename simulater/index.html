@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Air &amp; Road Simulator</title>
+<link rel="stylesheet" href="style.css">
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"}}</script>
+</head>
+<body>
+<div id="world" aria-hidden="true"></div>
+<header><a href="../index.html">← AC</a><button id="garage" hidden>Change vehicle</button></header>
+<main id="picker">
+ <h1>Air &amp; Road Simulator</h1>
+ <p>Pick a vehicle to explore the practice range or follow the checkpoints.</p>
+ <div id="vehicles"></div>
+ <p id="error" role="status"></p>
+</main>
+<section id="hud" hidden aria-label="Vehicle controls">
+ <h1 id="vehicleName"></h1>
+ <p id="telemetry"></p>
+ <p id="controls"></p>
+ <div class="buttons"><button id="camera">View · Chase</button><button id="reset">Reset vehicle</button><button id="course" aria-pressed="false">Start course</button></div>
+ <p id="raceStatus" role="status"></p>
+</section>
+<div id="touch" hidden aria-label="Touch controls">
+ <div class="steering"><button data-key="w" aria-label="Forward">↑</button><button data-key="a" aria-label="Left">←</button><button data-key="s" aria-label="Reverse">↓</button><button data-key="d" aria-label="Right">→</button></div>
+ <div class="altitude"><button data-key=" " aria-label="Climb">+</button><button data-key="shift" aria-label="Descend">−</button></div>
+</div>
+<script type="module" src="simulator.js"></script>
+</body>
+</html>
