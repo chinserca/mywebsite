@@ -2,11 +2,11 @@ import * as THREE from 'three';
 
 const el = id => document.getElementById(id);
 const vehicles = [
-  {name:'Tesla Roadster', kind:'car', paint:0xef4b46, speed:35, response:3, description:'Electric sports car · fast on the road'},
-  {name:'DJI Avata 2', kind:'drone', paint:0x39485e, speed:26, climb:13, response:4.5, description:'FPV drone · quick and agile'},
-  {name:'DJI Mini 4K', kind:'drone', paint:0xc5cad2, speed:16, climb:8, response:5.5, description:'Camera drone · gentle handling'},
-  {name:'DJI Air 3', kind:'drone', paint:0x88978d, speed:21, climb:10, response:4, description:'Camera drone · balanced flight'},
-  {name:'Rally Buggy', kind:'car', paint:0xffb53a, speed:24, response:5, description:'Practice car · tight turns'}
+  {name:'Tesla Roadster', kind:'car', paint:0xef4b46, health:160, thrusters:true, speed:35, response:3, description:'Electric sports car · fast on the road'},
+  {name:'DJI Avata 2', kind:'drone', paint:0x39485e, health:120, speed:26, climb:13, response:4.5, description:'FPV drone · quick and agile'},
+  {name:'DJI Mini 4K', kind:'drone', paint:0xc5cad2, health:75, speed:16, climb:8, response:5.5, description:'Camera drone · gentle handling'},
+  {name:'DJI Air 3', kind:'drone', paint:0x88978d, health:95, speed:21, climb:10, response:4, description:'Camera drone · balanced flight'},
+  {name:'Rally Buggy', kind:'car', paint:0xffb53a, health:140, speed:24, response:5, description:'Practice car · tight turns'}
 ];
 
 const scene = new THREE.Scene();
@@ -105,7 +105,8 @@ const marker = mesh(new THREE.TorusGeometry(3.8,.16,10,52),0x55f9ce,0,0,0,gates)
 marker.material.emissive.setHex(0x1cb991);
 gates.visible=false;
 let vehicle, model, yaw=0, speed=0, firstPerson=false, nextGate=0, raceStart=null, best={};
-let rotors=[],wheels=[];
+let rotors=[],wheels=[],liftFlames=[],boostFlames=[];
+let health=0, lastImpact=-Infinity;
 const velocity = new THREE.Vector3();
 const position = new THREE.Vector3();
 const keys=new Set();
@@ -117,6 +118,8 @@ function createModel(config){
   const group=new THREE.Group();
   rotors=[];
   wheels=[];
+  liftFlames=[];
+  boostFlames=[];
   if(config.kind==='car'){
     const roadster=config.name==='Tesla Roadster';
     const profile=new THREE.Shape();
@@ -151,6 +154,25 @@ function createModel(config){
         spoke.rotation.x=angle;
       }
       wheels.push(wheel);
+    }
+    if(config.thrusters){
+      for(const x of [-.65,.65]){
+        mesh(new THREE.CylinderGeometry(.22,.28,.16,16),0x253244,x,.19,0,group);
+        const lift=mesh(new THREE.ConeGeometry(.23,.94,16),0x62dfff,x,-.31,0,group);
+        lift.rotation.z=Math.PI;
+        liftFlames.push(lift);
+        const exhaust=mesh(new THREE.CylinderGeometry(.19,.23,.21,16),0x253244,x,.4,2.43,group);
+        exhaust.rotation.x=Math.PI/2;
+        const boost=mesh(new THREE.ConeGeometry(.21,1.25,16),0x76d9ff,x,.4,3.05,group);
+        boost.rotation.x=Math.PI/2;
+        boostFlames.push(boost);
+      }
+      for(const flame of [...liftFlames,...boostFlames]){
+        flame.material.emissive.setHex(0x2692d9);
+        flame.material.emissiveIntensity=1.7;
+        flame.castShadow=false;
+        flame.visible=false;
+      }
     }
   }else{
     box(1.25,.38,1.66,config.paint,0,0,0,group);
@@ -192,6 +214,10 @@ function clearCourse(){
 function resetVehicle(){
   keys.clear();
   yaw=0;
+  health=vehicle.health;
+  lastImpact=-Infinity;
+  el('health').max=vehicle.health;
+  updateHealth();
   speed=0;
   velocity.set(0,0,0);
   position.set(vehicle.kind==='drone'?-26:0,vehicle.kind==='drone'?1.05:0,vehicle.kind==='drone'?10:6);
@@ -212,11 +238,16 @@ function choose(config){
   el('camera').textContent='View · Chase';
   el('picker').hidden=true;
   el('garage').hidden=el('hud').hidden=el('touch').hidden=false;
-  el('touch').querySelector('.altitude').hidden=config.kind==='car';
+  el('touch').querySelector('.altitude').hidden=config.kind==='car'&&!config.thrusters;
+  const boostButton=el('touch').querySelector('[data-key="shift"]');
+  boostButton.textContent=config.thrusters?'Boost':'−';
+  boostButton.setAttribute('aria-label',config.thrusters?'Forward boost':'Descend');
   el('vehicleName').textContent=config.name;
   el('controls').textContent=config.kind==='drone'
     ? 'WASD move · Space climb · Shift descend · Q/E turn · C change view'
-    : 'W/S accelerate or reverse · A/D steer · Space brake · C change view';
+    : config.thrusters
+      ? 'W/S accelerate or reverse · A/D steer · Space lift thrusters · Shift forward boost · C change view'
+      : 'W/S accelerate or reverse · A/D steer · Space brake · C change view';
   resetVehicle();
 }
 for(const config of vehicles){
@@ -244,12 +275,31 @@ function toggleCamera(){
 }
 el('camera').onclick=toggleCamera;
 el('reset').onclick=resetVehicle;
+function updateHealth(){
+  el('health').value=health;
+  el('healthValue').textContent=health+' / '+vehicle.health;
+}
+function damage(amount,now){
+  if(amount<=0||now-lastImpact<450)return;
+  health=Math.max(0,health-Math.ceil(amount));
+  lastImpact=now;
+  updateHealth();
+  if(!health){
+    keys.clear();
+    speed=0;
+    clearCourse();
+    el('raceStatus').textContent='Vehicle wrecked. Select Reset vehicle to repair it.';
+  }else{
+    el('raceStatus').textContent='Impact · '+Math.ceil(amount)+' damage';
+  }
+}
 function showGate(){
   marker.position.set(...routes[vehicle.kind][nextGate]);
   marker.rotation.y=vehicle.kind==='car'&&[2,4].includes(nextGate)?Math.PI/2:0;
   el('raceStatus').textContent='Checkpoint '+(nextGate+1)+' / '+routes[vehicle.kind].length;
 }
 el('course').onclick=()=>{
+  if(!health)return;
   if(raceStart!==null){
     clearCourse();
     el('raceStatus').textContent='Course ended.';
@@ -268,7 +318,7 @@ addEventListener('keydown',event=>{
   if(!vehicle||event.ctrlKey||event.metaKey||event.altKey)return;
   const key=event.key.toLowerCase();
   if(key==='c'&&!event.repeat){toggleCamera();return;}
-  if(movement.includes(key)){event.preventDefault();keys.add(key);}
+  if(movement.includes(key)){event.preventDefault();if(health)keys.add(key);}
 });
 addEventListener('keyup',event=>keys.delete(event.key.toLowerCase()));
 addEventListener('blur',()=>keys.clear());
@@ -276,6 +326,7 @@ document.addEventListener('visibilitychange',()=>keys.clear());
 for(const button of document.querySelectorAll('[data-key]')){
   button.onpointerdown=event=>{
     event.preventDefault();
+    if(!health)return;
     button.setPointerCapture(event.pointerId);
     keys.add(button.dataset.key);
   };
@@ -292,6 +343,10 @@ function tick(now){
   last=now;
   if(vehicle){
     const drone=vehicle.kind==='drone';
+    const lift=health>0&&vehicle.thrusters&&keys.has(' ');
+    const boost=health>0&&vehicle.thrusters&&keys.has('shift');
+    for(const flame of liftFlames)flame.visible=!!lift;
+    for(const flame of boostFlames)flame.visible=!!boost;
     const easing=1-Math.exp(-dt*vehicle.response);
     if(drone){
       yaw-=direction('e','q')*dt*1.7;
@@ -305,21 +360,31 @@ function tick(now){
       rotors.forEach(rotor=>rotor.rotation.y+=dt*42);
     }else{
       const throttle=direction('w','s');
-      const target=keys.has(' ')?0:throttle*(throttle<0?vehicle.speed*.36:vehicle.speed);
-      const braking=keys.has(' ')||throttle*speed<0;
-      const acceleration=braking?24:throttle?8.5:3.1;
+      const brake=!vehicle.thrusters&&keys.has(' ');
+      const target=boost?vehicle.speed*1.7:brake?0:throttle*(throttle<0?vehicle.speed*.36:vehicle.speed);
+      const braking=brake||!boost&&throttle*speed<0;
+      const acceleration=boost?24:braking?24:throttle?8.5:3.1;
       speed+=THREE.MathUtils.clamp(target-speed,-acceleration*dt,acceleration*dt);
-      yaw-=direction('d','a')*dt*1.65*THREE.MathUtils.clamp(speed/7,-1,1);
-      velocity.set(-Math.sin(yaw)*speed,0,-Math.cos(yaw)*speed);
+      const steer=position.y>.1?1:THREE.MathUtils.clamp(speed/7,-1,1);
+      yaw-=direction('d','a')*dt*1.65*steer;
+      const vertical=vehicle.thrusters
+        ? THREE.MathUtils.clamp(velocity.y+(lift?18:-14)*dt,-32,19)
+        : 0;
+      velocity.set(-Math.sin(yaw)*speed,vertical,-Math.cos(yaw)*speed);
       wheels.forEach(wheel=>wheel.rotation.x-=speed*dt/.43);
     }
     lowerBound.y=drone?.42:0;
-    upperBound.y=drone?48:0;
+    upperBound.y=drone||vehicle.thrusters?48:0;
     proposed.copy(position).addScaledVector(velocity,dt).clamp(lowerBound,upperBound);
-    if((proposed.y===lowerBound.y&&velocity.y<0)||(proposed.y===upperBound.y&&velocity.y>0))velocity.y=0;
+    if(proposed.y===lowerBound.y&&velocity.y<0){
+      if(position.y>lowerBound.y)damage((-velocity.y-6)*3,now);
+      velocity.y=0;
+    }else if(proposed.y===upperBound.y&&velocity.y>0)velocity.y=0;
     const blocked=obstacles.some(({x,z,radius,height})=>proposed.y<height&&Math.hypot(proposed.x-x,proposed.z-z)<radius+1);
     if(blocked){
-      velocity.multiplyScalar(.25);
+      damage((Math.hypot(velocity.x,velocity.z)-2)*3,now);
+      velocity.x*=.25;
+      velocity.z*=.25;
       speed*=.25;
       position.y=proposed.y;
     }else position.copy(proposed);
@@ -327,7 +392,7 @@ function tick(now){
     model.rotation.y=yaw;
     model.visible=!firstPerson;
     const kmh=Math.round(Math.hypot(velocity.x,velocity.z)*3.6);
-    el('telemetry').textContent=kmh+' km/h'+(drone?' · Altitude '+position.y.toFixed(1)+' m':'');
+    el('telemetry').textContent=kmh+' km/h'+(drone||vehicle.thrusters?' · Altitude '+position.y.toFixed(1)+' m':'');
     if(raceStart!==null&&position.distanceTo(marker.position)<4){
       nextGate++;
       if(nextGate<routes[vehicle.kind].length)showGate();

@@ -19,6 +19,7 @@
 <section id="hud" hidden aria-label="Vehicle controls">
  <h1 id="vehicleName"></h1>
  <p id="telemetry"></p>
+ <label for="health">Health <progress id="health"></progress> <span id="healthValue"></span></label>
  <p id="controls"></p>
  <div class="buttons"><button id="camera">View · Chase</button><button id="reset">Reset vehicle</button><button id="course" aria-pressed="false">Start course</button></div>
  <p id="raceStatus" role="status"></p>
@@ -27,6 +28,6 @@
  <div class="steering"><button data-key="w" aria-label="Forward">↑</button><button data-key="a" aria-label="Left">←</button><button data-key="s" aria-label="Reverse">↓</button><button data-key="d" aria-label="Right">→</button></div>
  <div class="altitude"><button data-key=" " aria-label="Climb">+</button><button data-key="shift" aria-label="Descend">−</button></div>
 </div>
-<script type="module" src="simulator.js?v=realistic"></script>
+<script type="module" src="simulator.js?v=thrusters"></script>
 </body>
 </html>
