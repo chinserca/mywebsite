@@ -22,22 +22,48 @@ try {
 }
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.65));
 renderer.setSize(innerWidth,innerHeight);
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.2;
 el('world').append(renderer.domElement);
 scene.add(new THREE.HemisphereLight(0xe8f7ff,0x779266,2.1));
 const sun = new THREE.DirectionalLight(0xffe1a4,2.25);
-sun.position.set(18,40,-18);
+sun.position.set(38,65,28);
+sun.castShadow=true;
+sun.shadow.mapSize.set(2048,2048);
+Object.assign(sun.shadow.camera,{left:-52,right:52,top:52,bottom:-52,far:180});
+sun.shadow.normalBias=.045;
+scene.add(sun.target);
+const sunOffset=sun.position.clone();
 scene.add(sun);
 const material = color => new THREE.MeshStandardMaterial({color,roughness:.72});
 function mesh(geometry,color,x,y,z,parent=scene) {
   const object = new THREE.Mesh(geometry,material(color));
   object.position.set(x,y,z);
+  object.castShadow=true;
+  object.receiveShadow=true;
   parent.add(object);
   return object;
 }
 function box(w,h,d,color,x,y,z,parent) {
   return mesh(new THREE.BoxGeometry(w,h,d),color,x,y,z,parent);
 }
-box(380,.4,380,0x83a365,0,-.25,0);
+const ground=box(380,.4,380,0x839969,0,-.25,0);
+ground.castShadow=false;
+const texture=document.createElement('canvas');
+texture.width=texture.height=128;
+const ink=texture.getContext('2d');
+ink.fillStyle='#ddd';ink.fillRect(0,0,128,128);
+for(let i=0;i<2400;i++){
+  ink.fillStyle=i%2?'#c7c7c7':'#ebebeb';
+  ink.fillRect(i*71%128,(i*i*41+i*13)%128,1+i%3,1+i%2);
+}
+const grass=new THREE.CanvasTexture(texture);
+grass.colorSpace=THREE.SRGBColorSpace;
+grass.wrapS=grass.wrapT=THREE.RepeatWrapping;
+grass.repeat.set(72,72);
+ground.material.map=grass;
 const road = [[0,7],[0,-65],[54,-65],[54,-2],[0,-2]];
 for(let i=0;i<road.length-1;i++){
   const [x,z]=road[i], [nx,nz]=road[i+1];
@@ -51,6 +77,11 @@ for(let i=0;i<road.length-1;i++){
 }
 box(15,.05,15,0x334f65,-26,.025,10);
 mesh(new THREE.RingGeometry(4.8,5.05,48),0xa9ebf7,-26,.06,10).rotation.x=-Math.PI/2;
+for(let i=0;i<10;i++){
+  const x=7+i*4.5;
+  box(2.9,.09,.27,0xe5dfc6,x,.08,-69.7);
+  box(2.9,.09,.27,0xe5dfc6,x,.08,-60.3);
+}
 const obstacles=[];
 for(let i=0;i<38;i++){
   const x=(i*29%162)-80,z=(i*43%154)-92;
@@ -74,7 +105,7 @@ const marker = mesh(new THREE.TorusGeometry(3.8,.16,10,52),0x55f9ce,0,0,0,gates)
 marker.material.emissive.setHex(0x1cb991);
 gates.visible=false;
 let vehicle, model, yaw=0, speed=0, firstPerson=false, nextGate=0, raceStart=null, best={};
-let rotors=[];
+let rotors=[],wheels=[];
 const velocity = new THREE.Vector3();
 const position = new THREE.Vector3();
 const keys=new Set();
@@ -85,17 +116,49 @@ const up=new THREE.Vector3(0,1,0);
 function createModel(config){
   const group=new THREE.Group();
   rotors=[];
+  wheels=[];
   if(config.kind==='car'){
-    box(2.1,.48,4.6,config.paint,0,.44,0,group);
-    box(1.66,.47,1.95,0x233b52,0,.89,.22,group);
-    for(const x of [-.82,.82])box(.42,.16,.08,0xe8faff,x,.51,-2.3,group);
+    const roadster=config.name==='Tesla Roadster';
+    const profile=new THREE.Shape();
+    profile.moveTo(-2.32,.26);
+    profile.lineTo(2.28,.26);
+    profile.lineTo(2.23,.68);
+    profile.quadraticCurveTo(1.86,.82,.8,.79);
+    profile.lineTo(.47,.96);
+    profile.lineTo(-.68,.9);
+    profile.quadraticCurveTo(-1.65,.76,-2.32,.52);
+    profile.closePath();
+    const shell=mesh(new THREE.ExtrudeGeometry(profile,{depth:1.86,bevelSize:.12,bevelThickness:.1,bevelSegments:3,steps:1}),
+      config.paint,.93,0,0,group);
+    shell.rotation.y=-Math.PI/2;
+    shell.material.roughness=.28;
+    shell.material.metalness=.25;
+    const glass=box(1.59,roadster?.35:.57,1.46,0x263e55,0,roadster?.98:1.14,.23,group);
+    glass.material.roughness=.16;
+    for(const x of [-.78,.78]){
+      box(.46,.09,.09,0xe5f7ff,x,.52,-2.44,group);
+      box(.49,.09,.09,0xff3437,x,.55,2.42,group);
+      box(.26,.14,.32,config.paint,x*1.37,.88,-.27,group);
+    }
     for(const x of [-1.03,1.03])for(const z of [-1.42,1.42]){
-      mesh(new THREE.CylinderGeometry(.43,.43,.34,20),0x202532,x,.41,z,group).rotation.z=Math.PI/2;
-      mesh(new THREE.CylinderGeometry(.24,.24,.37,16),0x7d8b96,x,.41,z,group).rotation.z=Math.PI/2;
+      const wheel=new THREE.Group();
+      wheel.position.set(x,.41,z);
+      group.add(wheel);
+      mesh(new THREE.CylinderGeometry(.43,.43,.34,24),0x202532,0,0,0,wheel).rotation.z=Math.PI/2;
+      mesh(new THREE.CylinderGeometry(.26,.26,.36,20),0x8c9ca9,0,0,0,wheel).rotation.z=Math.PI/2;
+      for(const angle of [0,Math.PI/3,2*Math.PI/3]){
+        const spoke=box(.37,.045,.46,0x485862,0,0,0,wheel);
+        spoke.rotation.x=angle;
+      }
+      wheels.push(wheel);
     }
   }else{
     box(1.25,.38,1.66,config.paint,0,0,0,group);
     box(.4,.27,.18,0x101b2d,0,-.07,-.88,group);
+    const lens=mesh(new THREE.CylinderGeometry(.13,.16,.12,24),0x426f9c,0,-.07,-1,group);
+    lens.rotation.x=Math.PI/2;
+    lens.material.roughness=.12;
+    for(const x of [-.39,.39])box(.13,.09,.07,0x63e8ba,x,-.04,.85,group);
     for(const x of [-1,1])for(const z of [-.88,.88]){
       box(1.15,.12,.2,0x33455a,x*.59,0,z,group);
       const rotor=box(.94,.035,.12,0x182838,x,.2,z,group);
@@ -221,6 +284,8 @@ for(const button of document.querySelectorAll('[data-key]')){
 const direction=(positive,negative)=>Number(keys.has(positive))-Number(keys.has(negative));
 const wish=new THREE.Vector3();
 const proposed=new THREE.Vector3();
+const lowerBound=new THREE.Vector3(-125,0,-125);
+const upperBound=new THREE.Vector3(125,48,125);
 let last=performance.now();
 function tick(now){
   const dt=Math.min(.05,(now-last)/1000);
@@ -235,18 +300,23 @@ function tick(now){
       wish.multiplyScalar(vehicle.speed).applyAxisAngle(up,yaw);
       wish.y=direction(' ','shift')*vehicle.climb;
       velocity.lerp(wish,easing);
-      model.rotation.x=direction('w','s')*.16;
-      model.rotation.z=-direction('d','a')*.19;
+      model.rotation.x=THREE.MathUtils.lerp(model.rotation.x,direction('w','s')*-.22,easing);
+      model.rotation.z=THREE.MathUtils.lerp(model.rotation.z,direction('d','a')*-.27,easing);
       rotors.forEach(rotor=>rotor.rotation.y+=dt*42);
     }else{
       const throttle=direction('w','s');
       const target=keys.has(' ')?0:throttle*(throttle<0?vehicle.speed*.36:vehicle.speed);
-      speed+=(target-speed)*(keys.has(' ')?1-Math.exp(-dt*12):easing);
+      const braking=keys.has(' ')||throttle*speed<0;
+      const acceleration=braking?24:throttle?8.5:3.1;
+      speed+=THREE.MathUtils.clamp(target-speed,-acceleration*dt,acceleration*dt);
       yaw-=direction('d','a')*dt*1.65*THREE.MathUtils.clamp(speed/7,-1,1);
       velocity.set(-Math.sin(yaw)*speed,0,-Math.cos(yaw)*speed);
+      wheels.forEach(wheel=>wheel.rotation.x-=speed*dt/.43);
     }
-    proposed.copy(position).addScaledVector(velocity,dt).clamp(
-      new THREE.Vector3(-125,drone?1.05:0,-125),new THREE.Vector3(125,drone?48:0,125));
+    lowerBound.y=drone?.42:0;
+    upperBound.y=drone?48:0;
+    proposed.copy(position).addScaledVector(velocity,dt).clamp(lowerBound,upperBound);
+    if((proposed.y===lowerBound.y&&velocity.y<0)||(proposed.y===upperBound.y&&velocity.y>0))velocity.y=0;
     const blocked=obstacles.some(({x,z,radius,height})=>proposed.y<height&&Math.hypot(proposed.x-x,proposed.z-z)<radius+1);
     if(blocked){
       velocity.multiplyScalar(.25);
@@ -269,6 +339,8 @@ function tick(now){
       }
     }
   }
+  sun.target.position.set(position.x,0,position.z);
+  sun.position.copy(sunOffset).add(sun.target.position);
   placeCamera(dt);
   renderer.render(scene,camera);
   requestAnimationFrame(tick);
