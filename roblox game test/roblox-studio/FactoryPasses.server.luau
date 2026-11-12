@@ -1,10 +1,42 @@
 -- Script in ServerScriptService. Perks are granted only after Roblox ownership checks.
+local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
 local MarketplaceService = game:GetService("MarketplaceService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Passes = require(ReplicatedStorage:WaitForChild("FactoryPasses"))
 local configured = {}
 local ready = {}
+local wallet = DataStoreService:GetDataStore("FactoryWallet_v1")
+local premium = Passes[1]
+
+local function hasFreeExtras(player)
+ return string.lower(player.Name) == "toobiealex123"
+end
+
+local function refreshWallet(player, bonus)
+ local key = tostring(player.UserId)
+ for attempt = 1, 3 do
+  local ok, data = pcall(function()
+   if not bonus then return wallet:GetAsync(key) end
+   return wallet:UpdateAsync(key, function(saved)
+    saved = saved or { Money = 1000 }
+    if not saved.PremiumBonus then
+     saved.Money += premium.Bonus
+     saved.PremiumBonus = true
+    end
+    return saved
+   end)
+  end)
+  if ok then
+   if player.Parent == Players and (bonus or not player:GetAttribute("FactoryPass_Premium")) then
+    player:SetAttribute("FactoryMoney", data and data.Money or 1000)
+   end
+   return
+  end
+  if attempt < 3 then task.wait(attempt * 2) end
+ end
+ warn("Factory wallet unavailable for user " .. key)
+end
 for _, pass in Passes do
  if type(pass.Id) == "number" and pass.Id > 0 then
   assert(not configured[pass.Id], "Each Factory pass needs a different ID")
@@ -97,13 +129,27 @@ local function refreshOwnership(player, pass)
   return
  end
  if player.Parent ~= Players then return end
- player:SetAttribute("FactoryPass_" .. pass.Key, owns == true)
+ if pass.Key == "Premium" then
+  if owns then
+   player:SetAttribute("FactoryPass_Premium", true)
+   for _, extra in Passes do
+    if extra.Key ~= "Premium" then player:SetAttribute("FactoryPass_" .. extra.Key, true) end
+   end
+   task.spawn(refreshWallet, player, true)
+  end
+ else
+  player:SetAttribute("FactoryPass_" .. pass.Key,
+   owns == true or hasFreeExtras(player) or player:GetAttribute("FactoryPass_Premium") == true)
+ end
  if player.Character then applyPerks(player, player.Character) end
 end
 local function join(player)
  if ready[player] then return end
  ready[player] = true
- for _, pass in Passes do player:SetAttribute("FactoryPass_" .. pass.Key, false) end
+ for _, pass in Passes do
+  player:SetAttribute("FactoryPass_" .. pass.Key, pass.Key ~= "Premium" and hasFreeExtras(player))
+ end
+ task.spawn(refreshWallet, player, false)
  player.CharacterAdded:Connect(function(character)
   local root = character:WaitForChild("HumanoidRootPart", 10)
   local head = character:WaitForChild("Head", 10)

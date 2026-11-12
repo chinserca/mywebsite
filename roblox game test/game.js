@@ -449,7 +449,8 @@ function renderOrders(){
  }
 }
 $('closeDispatch').onclick=()=>$('dispatch').close();$('dispatch').addEventListener('close',()=>{$('dispatchStatus').textContent='';});
-$('robuxExtrasButton').onclick=()=>{if(flight)return;keys.clear();$('robuxExtras').showModal();};$('closeRobuxExtras').onclick=()=>$('robuxExtras').close();
+$('robuxExtrasButton').onclick=()=>{if(flight)return;keys.clear();$('robuxExtras').showModal();};$('premiumPreview').onclick=$('robuxExtrasButton').onclick;
+$('closeRobuxExtras').onclick=()=>$('robuxExtras').close();
 function renderShop(){
  $('shopOptions').replaceChildren();$('shopBalance').textContent='Your money: $'+state.money.toLocaleString();
  shopItems.forEach(item=>{const row=document.createElement('div');row.className='research-row';const info=document.createElement('span');const name=document.createElement('strong');name.textContent=item.name;const detail=document.createElement('p');detail.textContent=item.description;info.append(name,detail);const button=document.createElement('button');const owned=state.upgrades[item.id],locked=!state.conveyor;button.textContent=owned?'Owned ✓':locked?'Buy conveyor first':state.money<item.price?'Need $'+item.price:'Buy · $'+item.price;button.disabled=owned||locked||state.money<item.price;button.onclick=()=>{if(Math.hypot(player.position.x-8,player.position.z+12)>3)return;const result=act(state,'upgrade',item.id);if(result){updateHUD();persist();renderShop();$('shopStatus').textContent=result;notify(result);}};row.append(info,button);$('shopOptions').append(row);});

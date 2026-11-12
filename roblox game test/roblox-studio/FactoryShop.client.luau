@@ -29,7 +29,7 @@ panel.BackgroundColor3 = Color3.fromRGB(20, 34, 56)
 panel.BorderSizePixel = 0
 panel.Visible = false
 panel.ScrollBarThickness = 5
-panel.CanvasSize = UDim2.fromOffset(0, 480)
+panel.CanvasSize = UDim2.fromOffset(0, 105 + #Passes * 115 + 35)
 panel.Parent = gui
 Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 14)
 local function text(value, y, height, size)
@@ -47,6 +47,31 @@ local function text(value, y, height, size)
 end
 text("THE FACTORY · ROBUX EXTRAS", 15, 35, 19)
 text("Optional permanent cosmetics. No game money or account password needed.", 55, 42, 13)
+local premium = Passes[1]
+local premiumButton = toggle:Clone()
+premiumButton.Name = "PremiumPass"
+premiumButton.AnchorPoint = Vector2.new(1, 0.5)
+premiumButton.Position = UDim2.new(1, -15, 0.5, 0)
+premiumButton.Size = UDim2.fromOffset(200, 48)
+premiumButton.Text = "Premium Pass · " .. premium.Price .. " Robux"
+premiumButton.Parent = gui
+
+local balance = Instance.new("TextLabel")
+balance.Position = UDim2.new(0, 15, 1, -65)
+balance.Size = UDim2.fromOffset(150, 40)
+balance.BackgroundColor3 = Color3.fromRGB(28, 49, 69)
+balance.TextColor3 = Color3.fromRGB(232, 252, 244)
+balance.Font = Enum.Font.GothamBold
+balance.TextSize = 16
+balance.Parent = gui
+Instance.new("UICorner", balance).CornerRadius = UDim.new(0, 10)
+local function updateBalance()
+ local money = player:GetAttribute("FactoryMoney")
+ balance.Text = money and ("$" .. tostring(money)) or "Loading money…"
+end
+player:GetAttributeChangedSignal("FactoryMoney"):Connect(updateBalance)
+updateBalance()
+
 local prompting = false
 local updateButtons = {}
 for i, pass in Passes do
@@ -69,6 +94,10 @@ for i, pass in Passes do
  local function update()
   local owned = player:GetAttribute("FactoryPass_" .. pass.Key) == true
   buy.Text = owned and "Owned ✓" or (available and ("Buy · " .. tostring(price) .. " Robux") or "Unavailable / not connected")
+  if pass.Key == "Premium" then
+   premiumButton.Text = owned and "Premium Pass · Owned" or
+    ("Premium Pass · " .. tostring(price or premium.Price) .. " Robux")
+  end
   buy.AutoButtonColor = available and not owned and not prompting
   buy.BackgroundColor3 = owned and Color3.fromRGB(135, 232, 198) or Color3.fromRGB(255, 215, 117)
  end
@@ -81,16 +110,26 @@ for i, pass in Passes do
    update()
   end)
  end
- buy.Activated:Connect(function()
+ local function promptPurchase()
   if not available or prompting or player:GetAttribute("FactoryPass_" .. pass.Key) then return end
   prompting = true
   local ok = pcall(function() MarketplaceService:PromptGamePassPurchase(player, pass.Id) end)
   if not ok then prompting = false;buy.Text = "Could not open Roblox purchase. Try again." end
- end)
+ end
+ buy.Activated:Connect(promptPurchase)
+ if pass.Key == "Premium" then
+  premiumButton.Activated:Connect(function()
+   if available and not player:GetAttribute("FactoryPass_Premium") then
+    promptPurchase()
+   else
+    panel.Visible = not panel.Visible
+   end
+  end)
+ end
  update()
 end
 MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(who)
  if who == player then prompting = false;for _, update in updateButtons do update() end end
 end)
-text("Use the Robux Extras button to close this shop.", 455, 25, 12)
+text("Use the Robux Extras button to close this shop.", 105 + #Passes * 115, 25, 12)
 toggle.Activated:Connect(function() panel.Visible = not panel.Visible end)

@@ -139,3 +139,18 @@
 }
 .lab-scan i { width: 3%; background: var(--specimen-color); border-radius: 3px; }
 .lab-scan-idle i { opacity: .18; transform: scaleY(.09); }
+
+.premium-preview {
+  position: fixed;
+  z-index: 4;
+  right: 18px;
+  top: 51%;
+  transform: translateY(-50%);
+  background: #ffdb86;
+  color: #203549;
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+@media (max-width: 720px) {
+  .premium-preview { right: 10px; font-size: 11px; }
+}
