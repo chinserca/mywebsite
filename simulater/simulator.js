@@ -90,6 +90,22 @@ for(let i=0;i<38;i++){
   mesh(new THREE.ConeGeometry(2.1,5.2,12),i%2?0x365f49:0x477b54,x,4.25,z);
   obstacles.push({x,z,radius:1.65,height:7});
 }
+for(const [x,z,color] of [[17,13,0xe8d5b7],[32,13,0xd8e0e3],[47,13,0xe3bb9b],[-16,-36,0xd7d8b8]]){
+  box(8,4.6,7,color,x,2.3,z);
+  const roof=mesh(new THREE.CylinderGeometry(0,5.9,2.5,4),0x723e39,x,5.8,z);
+  roof.rotation.y=Math.PI/4;
+  box(1.3,2.2,.12,0x584337,x,1.1,z+3.53);
+  for(const offset of [-2.4,2.4])box(1.4,1.22,.14,0x86c5e1,x+offset,2.75,z+3.54);
+  obstacles.push({x,z,width:4.2,depth:3.7,height:7.1});
+}
+for(const [x,z,height] of [[68,-33,22],[-49,-66,28]]){
+  mesh(new THREE.CylinderGeometry(1.2,2.1,height,16),0x6e8090,x,height/2,z);
+  mesh(new THREE.CylinderGeometry(3.1,2.3,3,24),0x334e61,x,height,z);
+  mesh(new THREE.CylinderGeometry(.11,.16,3,12),0xb9cbd3,x,height+2.8,z);
+  const light=mesh(new THREE.SphereGeometry(.28,16,12),0xff4d40,x,height+4.4,z);
+  light.material.emissive.setHex(0xff3020);
+  obstacles.push({x,z,radius:2.8,height:height+4.7});
+}
 for(let i=0;i<16;i++){
   const angle=i*Math.PI/8;
   const hill=mesh(new THREE.IcosahedronGeometry(1,2),i%2?0x809f8a:0x8aa18a,Math.cos(angle)*155,0,Math.sin(angle)*155);
@@ -116,12 +132,9 @@ const cameraOffset=new THREE.Vector3();
 const look=new THREE.Vector3();
 const up=new THREE.Vector3(0,1,0);
 
-function createModel(config){
+function createModel(config,remote=false){
   const group=new THREE.Group();
-  rotors=[];
-  wheels=[];
-  liftFlames=[];
-  boostFlames=[];
+  if(!remote){rotors=[];wheels=[];liftFlames=[];boostFlames=[];}
   if(config.kind==='car'){
     const roadster=config.name==='Tesla Roadster';
     const profile=new THREE.Shape();
@@ -155,9 +168,9 @@ function createModel(config){
         const spoke=box(.37,.045,.46,0x485862,0,0,0,wheel);
         spoke.rotation.x=angle;
       }
-      wheels.push(wheel);
+      if(!remote)wheels.push(wheel);
     }
-    if(config.thrusters){
+    if(config.thrusters&&!remote){
       for(const x of [-.65,.65]){
         mesh(new THREE.CylinderGeometry(.22,.28,.16,16),0x253244,x,.19,0,group);
         const lift=mesh(new THREE.ConeGeometry(.23,.94,16),0x62dfff,x,-.31,0,group);
@@ -177,16 +190,28 @@ function createModel(config){
       }
     }
   }else{
-    box(1.25,.38,1.66,config.paint,0,0,0,group);
+    const shell=mesh(new THREE.SphereGeometry(1,32,18),config.paint,0,0,0,group);
+    shell.scale.set(.66,.24,config.bladeGuards?.85:1.02);
+    shell.material.roughness=.32;
+    shell.material.metalness=.22;
+    box(.68,.09,.92,0x223345,0,-.17,.1,group);
+    for(const x of [-.43,.43])box(.09,.12,.7,0x273741,x,-.22,.1,group);
+
     box(.4,.27,.18,0x101b2d,0,-.07,-.88,group);
     const lens=mesh(new THREE.CylinderGeometry(.13,.16,.12,24),0x426f9c,0,-.07,-1,group);
     lens.rotation.x=Math.PI/2;
     lens.material.roughness=.12;
     for(const x of [-.39,.39])box(.13,.09,.07,0x63e8ba,x,-.04,.85,group);
     for(const x of [-1,1])for(const z of [-.88,.88]){
-      box(1.15,.12,.2,0x33455a,x*.59,0,z,group);
+      const arm=box(.98,.14,.23,config.paint,x*.62,-.01,z*.8,group);
+      arm.rotation.y=x*z*.34;
+      mesh(new THREE.CylinderGeometry(.21,.17,.21,24),0x243446,x,.04,z,group);
+      mesh(new THREE.CylinderGeometry(.085,.085,.09,18),0xa5bacb,x,.24,z,group);
+      const light=mesh(new THREE.SphereGeometry(.075,12,8),z<0?0xf85750:0x43f4a6,x,.03,z+.22,group);
+      light.material.emissive.copy(light.material.color);
+
       const rotor=box(.94,.035,.12,0x182838,x,.2,z,group);
-      rotors.push(rotor);
+      if(!remote)rotors.push(rotor);
       if(config.bladeGuards){
         mesh(new THREE.TorusGeometry(.56,.055,8,28),0x566677,x,.18,z,group).rotation.x=-Math.PI/2;
       }
@@ -243,12 +268,14 @@ function choose(config){
   el('picker').hidden=true;
   el('garage').hidden=el('hud').hidden=el('touch').hidden=false;
   el('touch').querySelector('.altitude').hidden=config.kind==='car'&&!config.thrusters;
-  const boostButton=el('touch').querySelector('[data-key="shift"]');
+  const boostButton=el('descend');
+  el('climb').dataset.key=config.thrusters?' ':'arrowup';
+  boostButton.dataset.key=config.thrusters?'shift':'arrowdown';
   boostButton.textContent=config.thrusters?'Boost':'−';
   boostButton.setAttribute('aria-label',config.thrusters?'Forward boost':'Descend');
   el('vehicleName').textContent=config.name;
   el('controls').textContent=config.kind==='drone'
-    ? 'WASD move · Space take off or climb · Shift descend or land · ←/→ turn · C change view'
+    ? 'WASD move · ↑ take off or climb · ↓ descend or land · ←/→ turn · C change view'
     : config.thrusters
       ? 'W/S accelerate or reverse · A/D steer · Space lift thrusters · Shift forward boost · C change view'
       : 'W/S accelerate or reverse · A/D steer · Space brake · C change view';
@@ -317,7 +344,7 @@ el('course').onclick=()=>{
   el('course').setAttribute('aria-pressed','true');
   showGate();
 };
-const movement=['w','a','s','d','arrowleft','arrowright',' ','shift'];
+const movement=['w','a','s','d','arrowleft','arrowright','arrowup','arrowdown',' ','shift'];
 addEventListener('keydown',event=>{
   if(!vehicle||event.ctrlKey||event.metaKey||event.altKey)return;
   const key=event.key.toLowerCase();
@@ -360,13 +387,13 @@ function tick(now){
       }else{
         yaw-=direction('arrowright','arrowleft')*dt*1.7;
       }
-      if(landed&&keys.has(' ')&&health)landed=false;
+      if(landed&&keys.has('arrowup')&&health)landed=false;
       wish.set(direction('d','a'),0,-direction('w','s'));
       if(wish.lengthSq()>1)wish.normalize();
       wish.multiplyScalar(vehicle.speed).applyAxisAngle(up,yaw);
-      wish.y=direction(' ','shift')*vehicle.climb;
+      wish.y=direction('arrowup','arrowdown')*vehicle.climb;
       if(landed)wish.set(0,0,0);
-      else if(keys.has('shift')&&!keys.has(' ')&&position.y<1.8){
+      else if(keys.has('arrowdown')&&!keys.has('arrowup')&&position.y<1.8){
         wish.x=wish.z=0;
         wish.y=-2;
       }
@@ -395,14 +422,18 @@ function tick(now){
     if(proposed.y===lowerBound.y&&velocity.y<0){
       if(position.y>lowerBound.y)damage((-velocity.y-6)*3,now);
       velocity.y=0;
-      if(drone&&keys.has('shift')&&!keys.has(' ')){
+      if(drone&&keys.has('arrowdown')&&!keys.has('arrowup')){
         landed=true;
         velocity.set(0,0,0);
         proposed.x=position.x;
         proposed.z=position.z;
       }
     }else if(proposed.y===upperBound.y&&velocity.y>0)velocity.y=0;
-    const blocked=obstacles.some(({x,z,radius,height})=>proposed.y<height&&Math.hypot(proposed.x-x,proposed.z-z)<radius+1);
+    const blocked=obstacles.some(({x,z,radius,width,depth,height})=>{
+      if(proposed.y>=height)return false;
+      return radius ? Math.hypot(proposed.x-x,proposed.z-z)<radius+1
+        : Math.abs(proposed.x-x)<width+1&&Math.abs(proposed.z-z)<depth+1;
+    });
     if(blocked){
       const impactSpeed=Math.hypot(velocity.x,velocity.z);
       if(drone&&!vehicle.bladeGuards&&health&&spinRemaining===0&&impactSpeed>2&&now-lastImpact>=450){
@@ -434,6 +465,7 @@ function tick(now){
   sun.position.copy(sunOffset).add(sun.target.position);
   placeCamera(dt);
   renderer.render(scene,camera);
+  updatePeers(dt);
   requestAnimationFrame(tick);
 }
 addEventListener('resize',()=>{
@@ -442,3 +474,63 @@ addEventListener('resize',()=>{
   renderer.setSize(innerWidth,innerHeight);
 });
 requestAnimationFrame(tick);
+
+const playerId=crypto.randomUUID();
+const peers=new Map();
+
+function removePeer(id,peer){
+  scene.remove(peer.model);
+  peer.model.traverse(part=>{if(part.isMesh){part.geometry.dispose();part.material.dispose();}});
+  peer.label.remove();
+  peers.delete(id);
+}
+async function syncPeers(){
+  try{
+    const response=await fetch('/api/simulator-presence',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({id:playerId,vehicle:vehicles.indexOf(vehicle),x:position.x,y:position.y,z:position.z,yaw:Math.atan2(Math.sin(yaw),Math.cos(yaw))}),
+      signal:AbortSignal.timeout(4500)
+    });
+    if(!response.ok)throw new Error('Connection unavailable');
+    const {peers:players}=await response.json();
+    const active=new Set();
+    for(const player of players){
+      const config=vehicles[player.vehicle];
+      if(!config)continue;
+      active.add(player.id);
+      let peer=peers.get(player.id);
+      if(peer&&peer.config!==config){removePeer(player.id,peer);peer=null;}
+      if(!peer){
+        const label=document.createElement('span');
+        label.className='peer-label';
+        label.textContent=config.name;
+        document.body.append(label);
+        peer={config,model:createModel(config,true),label,target:new THREE.Vector3()};
+        peer.model.position.set(player.x,player.y,player.z);
+        peers.set(player.id,peer);
+      }
+      peer.target.set(player.x,player.y,player.z);
+      peer.model.rotation.y=player.yaw;
+    }
+    for(const [id,peer] of peers)if(!active.has(id))removePeer(id,peer);
+    el('online').textContent=players.length+' other '+(players.length===1?'player':'players')+' online';
+  }catch{
+    for(const [id,peer] of peers)removePeer(id,peer);
+    el('online').textContent='Multiplayer unavailable';
+  }finally{
+    setTimeout(syncPeers,1500);
+  }
+}
+const labelPosition=new THREE.Vector3();
+function updatePeers(dt){
+  for(const peer of peers.values()){
+    peer.model.position.lerp(peer.target,1-Math.exp(-dt*7));
+    labelPosition.copy(peer.model.position);
+    labelPosition.y+=2.1;
+    labelPosition.project(camera);
+    peer.label.hidden=!vehicle||labelPosition.z<-1||labelPosition.z>1||Math.abs(labelPosition.x)>1||Math.abs(labelPosition.y)>1;
+    peer.label.style.left=(labelPosition.x+1)*50+'%';
+    peer.label.style.top=(1-labelPosition.y)*50+'%';
+  }
+}
+void syncPeers();

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Air &amp; Road Simulator</title>
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=multiplayer">
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"}}</script>
 </head>
 <body>
@@ -18,7 +18,7 @@
 </main>
 <section id="hud" hidden aria-label="Vehicle controls">
  <h1 id="vehicleName"></h1>
- <p id="telemetry"></p>
+ <p id="telemetry"></p><p id="online">Connecting…</p>
  <label for="health">Health <progress id="health"></progress> <span id="healthValue"></span></label>
  <p id="controls"></p>
  <div class="buttons"><button id="camera">View · Chase</button><button id="reset">Reset vehicle</button><button id="course" aria-pressed="false">Start course</button></div>
@@ -26,8 +26,8 @@
 </section>
 <div id="touch" hidden aria-label="Touch controls">
  <div class="steering"><button data-key="w" aria-label="Forward">↑</button><button data-key="a" aria-label="Left">←</button><button data-key="s" aria-label="Reverse">↓</button><button data-key="d" aria-label="Right">→</button></div>
- <div class="altitude"><button data-key=" " aria-label="Climb">+</button><button data-key="shift" aria-label="Descend">−</button></div>
+ <div class="altitude"><button id="climb" data-key="arrowup" aria-label="Climb">+</button><button id="descend" data-key="arrowdown" aria-label="Descend">−</button></div>
 </div>
-<script type="module" src="simulator.js?v=landing"></script>
+<script type="module" src="simulator.js?v=multiplayer"></script>
 </body>
 </html>
