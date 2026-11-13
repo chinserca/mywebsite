@@ -107,6 +107,8 @@ gates.visible=false;
 let vehicle, model, yaw=0, speed=0, firstPerson=false, nextGate=0, raceStart=null, best={};
 let rotors=[],wheels=[],liftFlames=[],boostFlames=[];
 let health=0, lastImpact=-Infinity, spinRemaining=0;
+let landed=false;
+const landingHeight=.42;
 const velocity = new THREE.Vector3();
 const position = new THREE.Vector3();
 const keys=new Set();
@@ -217,6 +219,7 @@ function resetVehicle(){
   health=vehicle.health;
   lastImpact=-Infinity;
   spinRemaining=0;
+  landed=false;
   el('health').max=vehicle.health;
   updateHealth();
   speed=0;
@@ -245,7 +248,7 @@ function choose(config){
   boostButton.setAttribute('aria-label',config.thrusters?'Forward boost':'Descend');
   el('vehicleName').textContent=config.name;
   el('controls').textContent=config.kind==='drone'
-    ? 'WASD move · Space climb · Shift descend · ←/→ turn · C change view'
+    ? 'WASD move · Space take off or climb · Shift descend or land · ←/→ turn · C change view'
     : config.thrusters
       ? 'W/S accelerate or reverse · A/D steer · Space lift thrusters · Shift forward boost · C change view'
       : 'W/S accelerate or reverse · A/D steer · Space brake · C change view';
@@ -357,14 +360,20 @@ function tick(now){
       }else{
         yaw-=direction('arrowright','arrowleft')*dt*1.7;
       }
+      if(landed&&keys.has(' ')&&health)landed=false;
       wish.set(direction('d','a'),0,-direction('w','s'));
       if(wish.lengthSq()>1)wish.normalize();
       wish.multiplyScalar(vehicle.speed).applyAxisAngle(up,yaw);
       wish.y=direction(' ','shift')*vehicle.climb;
+      if(landed)wish.set(0,0,0);
+      else if(keys.has('shift')&&!keys.has(' ')&&position.y<1.8){
+        wish.x=wish.z=0;
+        wish.y=-2;
+      }
       velocity.lerp(wish,easing);
-      model.rotation.x=THREE.MathUtils.lerp(model.rotation.x,direction('w','s')*-.22,easing);
-      model.rotation.z=THREE.MathUtils.lerp(model.rotation.z,direction('d','a')*-.27,easing);
-      rotors.forEach(rotor=>rotor.rotation.y+=dt*42);
+      model.rotation.x=spinRemaining>0?spinRemaining:THREE.MathUtils.lerp(model.rotation.x,landed?0:direction('w','s')*-.22,easing);
+      model.rotation.z=THREE.MathUtils.lerp(model.rotation.z,landed?0:direction('d','a')*-.27,easing);
+      rotors.forEach(rotor=>rotor.rotation.y+=dt*(landed?0:42));
     }else{
       const throttle=direction('w','s');
       const brake=!vehicle.thrusters&&keys.has(' ');
@@ -380,12 +389,18 @@ function tick(now){
       velocity.set(-Math.sin(yaw)*speed,vertical,-Math.cos(yaw)*speed);
       wheels.forEach(wheel=>wheel.rotation.x-=speed*dt/.43);
     }
-    lowerBound.y=drone?.42:0;
+    lowerBound.y=drone?landingHeight:0;
     upperBound.y=drone||vehicle.thrusters?48:0;
     proposed.copy(position).addScaledVector(velocity,dt).clamp(lowerBound,upperBound);
     if(proposed.y===lowerBound.y&&velocity.y<0){
       if(position.y>lowerBound.y)damage((-velocity.y-6)*3,now);
       velocity.y=0;
+      if(drone&&keys.has('shift')&&!keys.has(' ')){
+        landed=true;
+        velocity.set(0,0,0);
+        proposed.x=position.x;
+        proposed.z=position.z;
+      }
     }else if(proposed.y===upperBound.y&&velocity.y>0)velocity.y=0;
     const blocked=obstacles.some(({x,z,radius,height})=>proposed.y<height&&Math.hypot(proposed.x-x,proposed.z-z)<radius+1);
     if(blocked){
@@ -403,7 +418,7 @@ function tick(now){
     model.rotation.y=yaw;
     model.visible=!firstPerson;
     const kmh=Math.round(Math.hypot(velocity.x,velocity.z)*3.6);
-    el('telemetry').textContent=kmh+' km/h'+(drone||vehicle.thrusters?' · Altitude '+position.y.toFixed(1)+' m':'');
+    el('telemetry').textContent=kmh+' km/h'+(drone||vehicle.thrusters?' · Altitude '+position.y.toFixed(1)+' m'+(landed?' · Landed':''):'');
     if(raceStart!==null&&position.distanceTo(marker.position)<4){
       nextGate++;
       if(nextGate<routes[vehicle.kind].length)showGate();
