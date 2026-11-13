@@ -3,7 +3,7 @@ import * as THREE from 'three';
 const el = id => document.getElementById(id);
 const vehicles = [
   {name:'Tesla Roadster', kind:'car', paint:0xef4b46, health:160, thrusters:true, speed:35, response:3, description:'Electric sports car · fast on the road'},
-  {name:'DJI Avata 2', kind:'drone', paint:0x39485e, health:120, speed:26, climb:13, response:4.5, description:'FPV drone · quick and agile'},
+  {name:'DJI Avata 2', kind:'drone', paint:0x39485e, health:120, bladeGuards:true, speed:26, climb:13, response:4.5, description:'FPV drone · quick and agile'},
   {name:'DJI Mini 4K', kind:'drone', paint:0xc5cad2, health:75, speed:16, climb:8, response:5.5, description:'Camera drone · gentle handling'},
   {name:'DJI Air 3', kind:'drone', paint:0x88978d, health:95, speed:21, climb:10, response:4, description:'Camera drone · balanced flight'},
   {name:'Rally Buggy', kind:'car', paint:0xffb53a, health:140, speed:24, response:5, description:'Practice car · tight turns'}
@@ -106,7 +106,7 @@ marker.material.emissive.setHex(0x1cb991);
 gates.visible=false;
 let vehicle, model, yaw=0, speed=0, firstPerson=false, nextGate=0, raceStart=null, best={};
 let rotors=[],wheels=[],liftFlames=[],boostFlames=[];
-let health=0, lastImpact=-Infinity;
+let health=0, lastImpact=-Infinity, spinRemaining=0;
 const velocity = new THREE.Vector3();
 const position = new THREE.Vector3();
 const keys=new Set();
@@ -185,7 +185,7 @@ function createModel(config){
       box(1.15,.12,.2,0x33455a,x*.59,0,z,group);
       const rotor=box(.94,.035,.12,0x182838,x,.2,z,group);
       rotors.push(rotor);
-      if(config.name==='DJI Avata 2'){
+      if(config.bladeGuards){
         mesh(new THREE.TorusGeometry(.56,.055,8,28),0x566677,x,.18,z,group).rotation.x=-Math.PI/2;
       }
     }
@@ -216,6 +216,7 @@ function resetVehicle(){
   yaw=0;
   health=vehicle.health;
   lastImpact=-Infinity;
+  spinRemaining=0;
   el('health').max=vehicle.health;
   updateHealth();
   speed=0;
@@ -349,7 +350,13 @@ function tick(now){
     for(const flame of boostFlames)flame.visible=!!boost;
     const easing=1-Math.exp(-dt*vehicle.response);
     if(drone){
-      yaw-=direction('arrowright','arrowleft')*dt*1.7;
+      if(spinRemaining>0){
+        const turn=Math.min(spinRemaining,dt*9);
+        yaw-=turn;
+        spinRemaining-=turn;
+      }else{
+        yaw-=direction('arrowright','arrowleft')*dt*1.7;
+      }
       wish.set(direction('d','a'),0,-direction('w','s'));
       if(wish.lengthSq()>1)wish.normalize();
       wish.multiplyScalar(vehicle.speed).applyAxisAngle(up,yaw);
@@ -382,7 +389,11 @@ function tick(now){
     }else if(proposed.y===upperBound.y&&velocity.y>0)velocity.y=0;
     const blocked=obstacles.some(({x,z,radius,height})=>proposed.y<height&&Math.hypot(proposed.x-x,proposed.z-z)<radius+1);
     if(blocked){
-      damage((Math.hypot(velocity.x,velocity.z)-2)*3,now);
+      const impactSpeed=Math.hypot(velocity.x,velocity.z);
+      if(drone&&!vehicle.bladeGuards&&health&&spinRemaining===0&&impactSpeed>2&&now-lastImpact>=450){
+        spinRemaining=Math.PI*2;
+      }
+      damage((impactSpeed-2)*3,now);
       velocity.x*=.25;
       velocity.z*=.25;
       speed*=.25;
