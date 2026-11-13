@@ -504,7 +504,7 @@ $('closeCheats').onclick=()=>$('cheatsDialog').close();
 $('cheatsForm').onsubmit=event=>{
  event.preventDefault();
  const command=$('cheatCommand').value.trim().toLowerCase();
- const money=command.match(/^\/money=(\d{1,9})$/);
+ const money=command.match(/^\/money=(\d{1,10})$/);
  let message;
  if(money){
   state.money=Number(money[1]);
