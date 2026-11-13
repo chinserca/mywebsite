@@ -6,7 +6,10 @@ const vehicles = [
   {name:'DJI Avata 2', kind:'drone', paint:0x39485e, health:120, bladeGuards:true, speed:26, climb:13, response:4.5, description:'FPV drone · quick and agile'},
   {name:'DJI Mini 4K', kind:'drone', paint:0xc5cad2, health:75, speed:16, climb:8, response:5.5, description:'Camera drone · gentle handling'},
   {name:'DJI Air 3', kind:'drone', paint:0x88978d, health:95, speed:21, climb:10, response:4, description:'Camera drone · balanced flight'},
-  {name:'Rally Buggy', kind:'car', paint:0xffb53a, health:140, speed:24, response:5, description:'Practice car · tight turns'}
+  {name:'Rally Buggy', kind:'car', paint:0xffb53a, health:140, speed:24, response:5, description:'Practice car · tight turns'},
+  {name:'DJI Mavic 3 Pro', kind:'drone', paint:0x566170, health:110, speed:22, climb:9, response:3.5, description:'Camera drone · steady handling'},
+  {name:'DJI Neo', kind:'drone', paint:0xd6dee5, health:65, bladeGuards:true, speed:14, climb:7, response:6, description:'Compact drone · guarded propellers'},
+  {name:'FPV Racer', kind:'drone', paint:0xee613f, health:90, speed:34, climb:16, response:5, description:'Racing drone · high speed'}
 ];
 
 const scene = new THREE.Scene();
@@ -379,7 +382,15 @@ function tick(now){
     for(const flame of liftFlames)flame.visible=!!lift;
     for(const flame of boostFlames)flame.visible=!!boost;
     const easing=1-Math.exp(-dt*vehicle.response);
-    if(drone){
+    if(drone&&!health){
+      if(position.y>landingHeight){
+        velocity.y=Math.max(-32,velocity.y-14*dt);
+        model.rotation.x+=dt*3;
+        model.rotation.z+=dt*4;
+      }else{
+        velocity.set(0,0,0);
+      }
+    }else if(drone){
       if(spinRemaining>0){
         const turn=Math.min(spinRemaining,dt*9);
         yaw-=turn;
@@ -419,6 +430,7 @@ function tick(now){
     lowerBound.y=drone?landingHeight:0;
     upperBound.y=drone||vehicle.thrusters?48:0;
     proposed.copy(position).addScaledVector(velocity,dt).clamp(lowerBound,upperBound);
+    const wreckLanded=drone&&!health&&proposed.y===landingHeight;
     if(proposed.y===lowerBound.y&&velocity.y<0){
       if(position.y>lowerBound.y)damage((-velocity.y-6)*3,now);
       velocity.y=0;
@@ -445,11 +457,12 @@ function tick(now){
       speed*=.25;
       position.y=proposed.y;
     }else position.copy(proposed);
+    if(wreckLanded)velocity.set(0,0,0);
     model.position.copy(position);
     model.rotation.y=yaw;
     model.visible=!firstPerson;
     const kmh=Math.round(Math.hypot(velocity.x,velocity.z)*3.6);
-    el('telemetry').textContent=kmh+' km/h'+(drone||vehicle.thrusters?' · Altitude '+position.y.toFixed(1)+' m'+(landed?' · Landed':''):'');
+    el('telemetry').textContent=kmh+' km/h'+(drone||vehicle.thrusters?' · Altitude '+position.y.toFixed(1)+' m'+(drone&&!health?(position.y>landingHeight?' · Falling':' · Crashed'):landed?' · Landed':''):'');
     if(raceStart!==null&&position.distanceTo(marker.position)<4){
       nextGate++;
       if(nextGate<routes[vehicle.kind].length)showGate();
