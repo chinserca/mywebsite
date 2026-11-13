@@ -131,7 +131,12 @@ export function buildAdventureWorld({THREE,scene,box,label,player}){
  });
  const planet=mesh(new THREE.IcosahedronGeometry(5,7),0x327db5,LAB_X-34,18,-108);const land=mesh(new THREE.IcosahedronGeometry(5.04,1),0x6bc9a5,LAB_X-34,18,-108);land.scale.set(.6,1,.97);animated.push({kind:'planet',m:planet},{kind:'planet',m:land});
  const stars=new THREE.BufferGeometry();const starPositions=[];for(let i=0;i<300;i++){const a=i*2.399963,r=25+i%94;starPositions.push(LAB_X+Math.cos(a)*r,7+i%23,Math.sin(a)*r);}stars.setAttribute('position',new THREE.Float32BufferAttribute(starPositions,3));scene.add(new THREE.Points(stars,new THREE.PointsMaterial({color:0xc6f5ff,size:.14,sizeAttenuation:true})));
- const crystalPositions=[[-18,7,'earth'],[29,-12,'earth'],[-26,28,'earth'],[10,33,'earth'],[-29,-1,'earth'],[LAB_X-9,7,'lab'],[LAB_X+9,2,'lab'],[LAB_X+5,-8,'lab']];
+ // Keep crystal IDs in their original order so existing collections still count.
+ const crystalPositions=[
+  [-116,-56,'earth'],[116,-77,'earth'],[-108,106,'earth'],
+  [36,121,'earth'],[92,103,'earth'],
+  [LAB_X-16,-22,'lab'],[LAB_X+16,-34,'lab'],[LAB_X+12,-55,'lab']
+ ];
  const crystals=crystalPositions.map(([x,z,region],id)=>{const m=mesh(new THREE.OctahedronGeometry(.55,0),region==='earth'?0x71ffe1:0xe4a7ff,x,1.1,z,true);const marker=ring(x,z,.8,region==='earth'?0x71ffe1:0xe4a7ff);return {id,x,z,region,m,marker};});
  // Companion's body and eyes follow the player; owned through the upgrade shop.
  const drone=new THREE.Group();scene.add(drone);for(const [geo,color,x,y,z] of [[new THREE.SphereGeometry(.4,24,16),0xffd364,0,0,0],[new THREE.BoxGeometry(.5,.2,.15),0x203b54,0,0,.35],[new THREE.BoxGeometry(.15,.1,.17),0x8bffeb,-.15,0,.44],[new THREE.BoxGeometry(.15,.1,.17),0x8bffeb,.15,0,.44]]){const m=new THREE.Mesh(geo,material(color));m.position.set(x,y,z);drone.add(m);}
