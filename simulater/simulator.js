@@ -89,8 +89,8 @@ const obstacles=[];
 for(let i=0;i<38;i++){
   const x=(i*29%162)-80,z=(i*43%154)-92;
   if((Math.abs(x)<9&&z>-74&&z<14)||(x>-10&&x<64&&(Math.abs(z+65)<9||Math.abs(z+2)<9))||(Math.abs(x-54)<9&&z>-74&&z<8)||Math.hypot(x+26,z-10)<12)continue;
-  box(.55,2.6,.55,0x775c40,x,1.3,z);
-  mesh(new THREE.ConeGeometry(2.1,5.2,12),i%2?0x365f49:0x477b54,x,4.25,z);
+  mesh(new THREE.CylinderGeometry(.24,.34,2.6,24),0x775c40,x,1.3,z);
+  mesh(new THREE.ConeGeometry(2.1,5.2,48),i%2?0x365f49:0x477b54,x,4.25,z);
   obstacles.push({x,z,radius:1.65,height:7});
 }
 for(const [x,z,color] of [[17,13,0xe8d5b7],[32,13,0xd8e0e3],[47,13,0xe3bb9b],[-16,-36,0xd7d8b8]]){
