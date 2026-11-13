@@ -261,19 +261,27 @@ function updateHUD(){
  $('career').textContent=state.deliveries+' deliveries · '+state.crystals.length+'/8 crystals · '+state.surveys.length+'/'+surveySites.length+' outposts'+(state.salvage?' · Salvage crate':'');
  $('location').textContent=cargoFlying?'Orbital cargo route':location==='earth'?'The Factory · Earth':'International Alien Lab';$('netToggle').hidden=!state.net;$('netToggle').textContent=netEquipped?'Put net away':'Equip net';handNet.visible=netEquipped;netStand.visible=!state.net;netSign.visible=!state.net;$('alienCount').textContent=state.aliens.reduce((a,b)=>a+b,0)+' / 6';$('alienInventory').replaceChildren();alienTypes.forEach((a,i)=>{const row=document.createElement('div');row.textContent=a.name+' × '+state.aliens[i]+' · Studied '+state.alienStudies[i];$('alienInventory').append(row);});
  $('money').textContent=state.money.toLocaleString('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0});const total=state.bag.reduce((a,b)=>a+b,0);$('bag').textContent='Backpack · '+total+' / '+capacity(state);$('materials').replaceChildren();materials.forEach((m,i)=>{const row=document.createElement('div');row.textContent=m.name+' × '+state.bag[i]+' · $'+materialValue(state,i)+(state.studied[i]?' ★':'');$('materials').append(row);});claim.visible=!state.claimed;claimLabel.visible=!state.claimed;purchase.visible=state.claimed&&!state.conveyor;purchaseLabel.visible=purchase.visible;conveyor.visible=state.conveyor;$('objective').textContent=guide==='Expedition'&&state.conveyor?(state.surveys.length===surveySites.length?(state.salvage?'Deliver salvage at the dispatch desk':'Pick up a salvage crate'):'Survey outposts · '+state.surveys.length+'/'+surveySites.length):guide==='Crystals'?(state.crystals.length===adventure.crystals.length?'All energy crystals found':'Find energy crystals · '+state.crystals.length+'/8'):guide==='Deliveries'&&state.conveyor?'Ship materials at the dispatch desk':location==='lab'?(state.aliens.some(n=>n)?'Study your captured aliens':state.relays.length<stationRelays.length?'Restore station relays · '+state.relays.length+'/'+stationRelays.length:'Visit the Ship Blueprint Roller'):guide==='Aliens'&&state.conveyor?(!state.net?'Collect the alien net':state.aliens.some(n=>n)?state.rocket?'Ride rocket to alien lab':'Save $1,000 for the rocket':'Equip net and catch aliens'):!state.claimed?'Claim your factory':!state.conveyor?'Buy a conveyor · $500':total?'Put materials in the funnel':'Collect materials outside';
- if(guide==='Flight Recorders')$('objective').textContent=state.recordersSubmitted?'Flight data analyzed':state.recorders.length===3?'Bring the recorders to the station':'Recover flight recorders · '+state.recorders.length+'/3';
- if(guide==='Sky Survey')$('objective').textContent=state.skySurvey.length===3?'Sky survey complete':'Visit telescope pads · '+state.skySurvey.length+'/3';
+ if(state.conveyor&&guide==='Flight Recorders'){
+  $('objective').textContent=state.recordersSubmitted?'Flight data analyzed'
+   :state.recorders.length<3?'Recover flight recorders · '+state.recorders.length+'/3'
+   :state.rocket?'Bring the recorders to the station':'Buy the rocket · $1,000';
+ }
+ if(state.conveyor&&guide==='Sky Survey'){
+  $('objective').textContent=state.skySurvey.length===3?'Sky survey complete'
+   :state.rocket?'Visit telescope pads · '+state.skySurvey.length+'/3':'Buy the rocket · $1,000';
+ }
  if(cargoFlying)$('objective').textContent='Deliver cargo to '+cargoDestinations[state.cargoRun.order].name;
  else if(state.cargoRun&&location==='earth')$('objective').textContent='Resume cargo flight at dispatch';
 }
 function target(){
  if(!cargoFlying&&state.cargoRun&&location==='earth')return {x:-7,z:-1};
  if(cargoFlying)return cargoDestinations[state.cargoRun.order];
- if(guide==='Flight Recorders'&&!state.recordersSubmitted){
+ if(state.conveyor&&guide==='Flight Recorders'){
+  if(state.recordersSubmitted)return null;
   if(state.recorders.length===3)return location==='lab'?recorderTerminal:{x:25,z:4};
   return location==='lab'?{x:LAB_X,z:8}:recorderSites.find((_,index)=>!state.recorders.includes(index));
  }
- if(guide==='Sky Survey'){
+ if(state.conveyor&&guide==='Sky Survey'){
   if(state.skySurvey.length===3)return null;
   return location==='lab'?telescopeSites.find((_,index)=>!state.skySurvey.includes(index)):{x:25,z:4};
  }
