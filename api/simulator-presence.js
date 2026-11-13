@@ -24,7 +24,7 @@ module.exports=async function handler(req,res){
  const player={id,x,y,z,yaw,vehicle,seen:Date.now()};
  try{
   const active=(await Promise.all(slots.map(key=>cache.get(key))))
-   .map(value=>validPosition(value)&&Number.isFinite(value.seen)&&player.seen-value.seen<lifetime*1000?value:null);
+   .map(value=>validPosition(value)&&Number.isFinite(value.seen)&&player.seen-value.seen<lifetime*1000&&value.vehicle>=0?value:null);
   let slot=active.findIndex(value=>value?.id===id);
   if(slot===-1&&vehicle>=0){
    const start=parseInt(id.slice(0,8),16)%slotCount;
@@ -34,7 +34,7 @@ module.exports=async function handler(req,res){
    }
   }
   if(slot===-1&&vehicle>=0)return res.status(503).json({error:'World is full'});
-  if(slot>=0)await cache.set(slots[slot],player,{ttl:lifetime});
+  if(slot>=0)await cache.set(slots[slot],player,{ttl:vehicle>=0?lifetime:1});
   const peers=active.filter(value=>value&&value.id!==id&&value.vehicle>=0)
    .map(({id,x,y,z,yaw,vehicle})=>({id,x,y,z,yaw,vehicle}));
   return res.status(200).json({peers});

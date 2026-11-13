@@ -287,6 +287,7 @@ function interact(nearbyAction=nearby){const nearby=nearbyAction;if(!nearby||mod
  openGenetics(nearby.action);
  return;
 }if(nearby.action==='cargoLanding'){
+ if(!cargoFlying||!state.cargoRun)return;
  const destination=cargoDestinations[state.cargoRun.order];
  const payout=deliverCargo(state);
  playSound('reward');
@@ -408,6 +409,7 @@ function movePlayerTo(x,z){
 }
 function endCargoFlight(){
  cargoFlying=false;
+ nearby=null;
  player.visible=true;
  cargoShip.visible=false;
  keys.clear();
