@@ -1,6 +1,7 @@
 const {getCache}=require('@vercel/functions');
 const cache=getCache({namespace:'mywebsite-simulator-presence-v1'});
 const slotCount=16;
+const cars=new Set([0,4]);
 const lifetime=18;
 const slots=Array.from({length:slotCount},(_,i)=>'player-'+i);
 
@@ -21,7 +22,7 @@ module.exports=async function handler(req,res){
  }
  if(!validPosition(input))return res.status(400).json({error:'Invalid position'});
  const {id,x,y,z,yaw,vehicle}=input;
- const player={id,x,y,z,yaw,vehicle,seen:Date.now()};
+ const player={id,x,y,z,yaw,vehicle,canCollide:input.canCollide===true,seen:Date.now()};
  try{
   const active=(await Promise.all(slots.map(key=>cache.get(key))))
    .map(value=>validPosition(value)&&Number.isFinite(value.seen)&&player.seen-value.seen<lifetime*1000&&value.vehicle>=0?value:null);
@@ -37,7 +38,21 @@ module.exports=async function handler(req,res){
   if(slot>=0)await cache.set(slots[slot],player,{ttl:vehicle>=0?lifetime:1});
   const peers=active.filter(value=>value&&value.id!==id&&value.vehicle>=0)
    .map(({id,x,y,z,yaw,vehicle})=>({id,x,y,z,yaw,vehicle}));
-  return res.status(200).json({peers});
+  let collision=false;
+  if(vehicle>=0&&!cars.has(vehicle)&&input.canCollide===true){
+   const hit=await cache.get('collision-'+id);
+   collision=Boolean(hit)&&y>.65;
+   if(!collision){
+    const other=active.find(peer=>peer&&peer.id!==id&&peer.canCollide&&!cars.has(peer.vehicle)
+     &&player.seen-peer.seen<3500&&(y>.65||peer.y>.65)
+     &&Math.hypot(x-peer.x,z-peer.z)<2&&Math.abs(y-peer.y)<.7);
+    if(other){
+     collision=true;
+     await cache.set('collision-'+other.id,true,{ttl:6});
+    }
+   }
+  }
+  return res.status(200).json({peers,collision});
  }catch{
   return res.status(503).json({error:'World unavailable'});
  }

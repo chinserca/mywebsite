@@ -148,6 +148,7 @@ let rotors=[],wheels=[],liftFlames=[],boostFlames=[];
 let health=0, lastImpact=-Infinity, spinRemaining=0;
 let landed=false;
 let battery=100, emergencyLanding=false;
+let collisionFall=false, lastDroneCrash=-Infinity;
 const landingHeight=.42;
 const velocity = new THREE.Vector3();
 const position = new THREE.Vector3();
@@ -281,6 +282,7 @@ function resetVehicle(){
   landed=false;
   battery=100;
   emergencyLanding=false;
+  collisionFall=false;
   el("batteryMeter").hidden=vehicle.kind!=="drone";
   el("battery").value=100;
   el("batteryValue").textContent="100%";
@@ -432,7 +434,7 @@ function tick(now){
     for(const flame of liftFlames)flame.visible=!!lift;
     for(const flame of boostFlames)flame.visible=!!boost;
     const easing=1-Math.exp(-dt*vehicle.response);
-    if(drone&&!health){
+    if(drone&&(!health||collisionFall)){
       if(position.y>landingHeight){
         velocity.y=Math.max(-32,velocity.y-14*dt);
         model.rotation.x+=dt*3;
@@ -491,7 +493,7 @@ function tick(now){
     lowerBound.y=drone?landingHeight:0;
     upperBound.y=drone||vehicle.thrusters?48:0;
     proposed.copy(position).addScaledVector(velocity,dt).clamp(lowerBound,upperBound);
-    const wreckLanded=drone&&!health&&proposed.y===landingHeight;
+    const wreckLanded=drone&&(!health||collisionFall)&&proposed.y===landingHeight;
     if(proposed.y===lowerBound.y&&velocity.y<0){
       if(position.y>lowerBound.y)damage((-velocity.y-6)*3,now);
       velocity.y=0;
@@ -518,7 +520,10 @@ function tick(now){
       speed*=.25;
       position.y=proposed.y;
     }else position.copy(proposed);
-    if(wreckLanded)velocity.set(0,0,0);
+    if(wreckLanded){
+      velocity.set(0,0,0);
+      if(collisionFall){landed=true;collisionFall=false;}
+    }
     model.position.copy(position);
     model.rotation.y=yaw;
     model.visible=!firstPerson;
@@ -563,14 +568,26 @@ function removePeer(id,peer){
   peers.delete(id);
 }
 async function syncPeers(){
+  const sendingVehicle=vehicle;
+  const canCollide=vehicle?.kind==='drone'&&health>0&&!collisionFall&&performance.now()-lastDroneCrash>6500;
   try{
     const response=await fetch('/api/simulator-presence',{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({id:playerId,vehicle:vehicle?.baseIndex??vehicles.indexOf(vehicle),x:position.x,y:position.y,z:position.z,yaw:Math.atan2(Math.sin(yaw),Math.cos(yaw))}),
+      body:JSON.stringify({id:playerId,canCollide,vehicle:vehicle?.baseIndex??vehicles.indexOf(vehicle),x:position.x,y:position.y,z:position.z,yaw:Math.atan2(Math.sin(yaw),Math.cos(yaw))}),
       signal:AbortSignal.timeout(4500)
     });
     if(!response.ok)throw new Error('Connection unavailable');
-    const {peers:players}=await response.json();
+    const {peers:players,collision}=await response.json();
+    if(collision&&canCollide&&vehicle===sendingVehicle&&health>0){
+      const now=performance.now();
+      lastDroneCrash=now;
+      lastImpact=-Infinity;
+      damage(30,now);
+      collisionFall=true;
+      keys.clear();
+      velocity.y=Math.min(velocity.y,0);
+      if(health)el('raceStatus').textContent='Drone collision · 30 damage';
+    }
     const active=new Set();
     for(const player of players){
       const config=vehicles[player.vehicle];
