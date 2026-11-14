@@ -147,6 +147,7 @@ let vehicle, model, yaw=0, speed=0, firstPerson=false, nextGate=0, raceStart=nul
 let rotors=[],wheels=[],liftFlames=[],boostFlames=[];
 let health=0, lastImpact=-Infinity, spinRemaining=0;
 let landed=false;
+let battery=100, emergencyLanding=false;
 const landingHeight=.42;
 const velocity = new THREE.Vector3();
 const position = new THREE.Vector3();
@@ -278,6 +279,11 @@ function resetVehicle(){
   lastImpact=-Infinity;
   spinRemaining=0;
   landed=false;
+  battery=100;
+  emergencyLanding=false;
+  el("batteryMeter").hidden=vehicle.kind!=="drone";
+  el("battery").value=100;
+  el("batteryValue").textContent="100%";
   el('health').max=vehicle.health;
   updateHealth();
   speed=0;
@@ -443,7 +449,15 @@ function tick(now){
         yaw-=direction('arrowright','arrowleft')*dt*1.7;
         stabilizedHeading=yaw;
       }
-      if(landed&&keys.has('arrowup')&&health)landed=false;
+      if(landed){
+        battery=Math.min(100,battery+dt*5);
+        if(battery>=10)emergencyLanding=false;
+        if(!emergencyLanding&&keys.has('arrowup'))landed=false;
+      }else{
+        const working=movement.some(key=>keys.has(key));
+        battery=Math.max(0,battery-dt*(working?1.15:.65));
+        if(battery===0)emergencyLanding=true;
+      }
       wish.set(direction('d','a'),0,-direction('w','s'));
       if(wish.lengthSq()>1)wish.normalize();
       wish.multiplyScalar(vehicle.speed).applyAxisAngle(up,yaw);
@@ -454,6 +468,7 @@ function tick(now){
         wish.x=wish.z=0;
         wish.y=-2;
       }
+      if(emergencyLanding&&!landed)wish.set(0,-2,0);
       velocity.lerp(wish,easing);
       model.rotation.x=spinRemaining>0?spinRemaining:THREE.MathUtils.lerp(model.rotation.x,landed?0:direction('w','s')*-.22,easing);
       model.rotation.z=THREE.MathUtils.lerp(model.rotation.z,landed?0:(direction('d','a')+direction('arrowright','arrowleft')*.55)*-.27,easing);
@@ -480,7 +495,7 @@ function tick(now){
     if(proposed.y===lowerBound.y&&velocity.y<0){
       if(position.y>lowerBound.y)damage((-velocity.y-6)*3,now);
       velocity.y=0;
-      if(drone&&keys.has('arrowdown')&&!keys.has('arrowup')){
+      if(drone&&(emergencyLanding||keys.has('arrowdown')&&!keys.has('arrowup'))){
         landed=true;
         velocity.set(0,0,0);
         proposed.x=position.x;
@@ -507,6 +522,10 @@ function tick(now){
     model.position.copy(position);
     model.rotation.y=yaw;
     model.visible=!firstPerson;
+    if(drone){
+      el('battery').value=battery;
+      el('batteryValue').textContent=Math.ceil(battery)+'%'+(health&&emergencyLanding&&!landed?' · Emergency descent':health&&landed&&battery<100?' · Charging':'');
+    }
     const kmh=Math.round(Math.hypot(velocity.x,velocity.z)*3.6);
     el('telemetry').textContent=kmh+' km/h'+(drone||vehicle.thrusters?' · Altitude '+position.y.toFixed(1)+' m'+(drone&&!health?(position.y>landingHeight?' · Falling':' · Crashed'):landed?' · Landed':''):'');
     if(raceStart!==null&&position.distanceTo(marker.position)<4){
