@@ -4,19 +4,19 @@ import {setupWorkshop} from './workshop.js';
 const el = id => document.getElementById(id);
 const vehicles = [
   {name:'Tesla Roadster', kind:'car', paint:0xef4b46, health:160, thrusters:true, speed:35, response:3, description:'Electric sports car · fast on the road'},
-  {name:'DJI Avata 2', kind:'drone', paint:0x39485e, health:120, fpv:true, bladeGuards:true, speed:26, climb:13, response:4.5, description:'FPV drone · quick and agile'},
-  {name:'DJI Mini 4K', kind:'drone', paint:0xc5cad2, health:75, speed:16, climb:8, response:5.5, description:'Camera drone · gentle handling'},
-  {name:'DJI Air 3', kind:'drone', paint:0x88978d, health:95, speed:21, climb:10, response:4, description:'Camera drone · balanced flight'},
+  {name:'DJI Avata 2', kind:'drone', batterySeconds:240, paint:0x39485e, health:120, fpv:true, bladeGuards:true, speed:26, climb:13, response:4.5, description:'FPV drone · quick and agile'},
+  {name:'DJI Mini 4K', kind:'drone', batterySeconds:360, paint:0xc5cad2, health:75, speed:16, climb:8, response:5.5, description:'Camera drone · gentle handling'},
+  {name:'DJI Air 3', kind:'drone', batterySeconds:480, paint:0x88978d, health:95, speed:21, climb:10, response:4, description:'Camera drone · balanced flight'},
   {name:'Rally Buggy', kind:'car', paint:0xffb53a, health:140, speed:24, response:5, description:'Practice car · tight turns'},
-  {name:'DJI Mavic 3 Pro', kind:'drone', paint:0x566170, health:110, speed:22, climb:9, response:3.5, description:'Camera drone · steady handling'},
-  {name:'DJI Neo', kind:'drone', paint:0xd6dee5, health:65, bladeGuards:true, speed:14, climb:7, response:6, description:'Compact drone · guarded propellers'},
-  {name:'FPV Racer', fpv:true, kind:'drone', paint:0xee613f, health:90, speed:34, climb:16, response:5, description:'Racing drone · high speed'},
-  {name:'Surveyor', kind:'drone', paint:0xe4ac42, health:145, speed:17, climb:8, response:3, description:'Survey drone · sturdy and steady'},
-  {name:'Micro Whoop', fpv:true, kind:'drone', paint:0x8f70d8, health:55, bladeGuards:true, speed:12, climb:9, response:8, description:'Compact FPV drone · quick turns and blade guards'},
-  {name:'Sky Courier', kind:'drone', paint:0x42a7a3, health:130, speed:24, climb:12, response:4, description:'Cargo drone · balanced speed and durability'},
-  {name:'Cinewhoop', kind:'drone', fpv:true, bladeGuards:true, paint:0x295d89, health:105, speed:19, climb:10, response:5, description:'Guarded FPV drone · smooth handling'},
-  {name:'Horizon Explorer', kind:'drone', paint:0xe3e0cf, health:100, speed:20, climb:9, response:4, description:'Camera drone · stabilized view'},
-  {name:'Long Range FPV', kind:'drone', fpv:true, paint:0x334956, health:115, speed:30, climb:14, response:3, description:'FPV drone · fast cruising'}
+  {name:'DJI Mavic 3 Pro', kind:'drone', batterySeconds:420, paint:0x566170, health:110, speed:22, climb:9, response:3.5, description:'Camera drone · steady handling'},
+  {name:'DJI Neo', kind:'drone', batterySeconds:210, paint:0xd6dee5, health:65, bladeGuards:true, speed:14, climb:7, response:6, description:'Compact drone · guarded propellers'},
+  {name:'FPV Racer', fpv:true, kind:'drone', batterySeconds:210, paint:0xee613f, health:90, speed:34, climb:16, response:5, description:'Racing drone · high speed'},
+  {name:'Surveyor', kind:'drone', batterySeconds:540, paint:0xe4ac42, health:145, speed:17, climb:8, response:3, description:'Survey drone · sturdy and steady'},
+  {name:'Micro Whoop', fpv:true, kind:'drone', batterySeconds:180, paint:0x8f70d8, health:55, bladeGuards:true, speed:12, climb:9, response:8, description:'Compact FPV drone · quick turns and blade guards'},
+  {name:'Sky Courier', kind:'drone', batterySeconds:420, paint:0x42a7a3, health:130, speed:24, climb:12, response:4, description:'Cargo drone · balanced speed and durability'},
+  {name:'Cinewhoop', kind:'drone', batterySeconds:240, fpv:true, bladeGuards:true, paint:0x295d89, health:105, speed:19, climb:10, response:5, description:'Guarded FPV drone · smooth handling'},
+  {name:'Horizon Explorer', kind:'drone', batterySeconds:480, paint:0xe3e0cf, health:100, speed:20, climb:9, response:4, description:'Camera drone · stabilized view'},
+  {name:'Long Range FPV', kind:'drone', batterySeconds:360, fpv:true, paint:0x334956, health:115, speed:30, climb:14, response:3, description:'FPV drone · fast cruising'}
 ];
 
 const scene = new THREE.Scene();
@@ -328,6 +328,7 @@ for(const config of vehicles){
   button.style.setProperty('--paint','#'+config.paint.toString(16).padStart(6,'0'));
   const description=document.createElement('span');
   description.textContent=config.description;
+  if(config.batterySeconds)description.append(' · '+config.batterySeconds/60+' min active flight');
   button.append(description);
   button.onclick=()=>choose(config);
   el('vehicles').append(button);
@@ -456,8 +457,9 @@ function tick(now){
         if(battery>=10)emergencyLanding=false;
         if(!emergencyLanding&&keys.has('arrowup'))landed=false;
       }else{
-        const working=movement.some(key=>keys.has(key));
-        battery=Math.max(0,battery-dt*(working?1.15:.65));
+        const working=['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].some(key=>keys.has(key));
+        const load=working?1:.6;
+        battery=Math.max(0,battery-dt*100*load/vehicle.batterySeconds);
         if(battery===0)emergencyLanding=true;
       }
       wish.set(direction('d','a'),0,-direction('w','s'));
