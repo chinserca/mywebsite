@@ -9,7 +9,10 @@ const vehicles = [
   {name:'Rally Buggy', kind:'car', paint:0xffb53a, health:140, speed:24, response:5, description:'Practice car · tight turns'},
   {name:'DJI Mavic 3 Pro', kind:'drone', paint:0x566170, health:110, speed:22, climb:9, response:3.5, description:'Camera drone · steady handling'},
   {name:'DJI Neo', kind:'drone', paint:0xd6dee5, health:65, bladeGuards:true, speed:14, climb:7, response:6, description:'Compact drone · guarded propellers'},
-  {name:'FPV Racer', kind:'drone', paint:0xee613f, health:90, speed:34, climb:16, response:5, description:'Racing drone · high speed'}
+  {name:'FPV Racer', kind:'drone', paint:0xee613f, health:90, speed:34, climb:16, response:5, description:'Racing drone · high speed'},
+  {name:'Surveyor', kind:'drone', paint:0xe4ac42, health:145, speed:17, climb:8, response:3, description:'Survey drone · sturdy and steady'},
+  {name:'Micro Whoop', kind:'drone', paint:0x8f70d8, health:55, bladeGuards:true, speed:12, climb:9, response:8, description:'Compact FPV drone · quick turns and blade guards'},
+  {name:'Sky Courier', kind:'drone', paint:0x42a7a3, health:130, speed:24, climb:12, response:4, description:'Cargo drone · balanced speed and durability'}
 ];
 
 const scene = new THREE.Scene();

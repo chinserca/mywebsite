@@ -7,7 +7,7 @@ const slots=Array.from({length:slotCount},(_,i)=>'player-'+i);
 function validPosition(value){
  if(!value||typeof value.id!=='string'||!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(value.id))return false;
  const {x,y,z,yaw,vehicle}=value;
- return Number.isInteger(vehicle)&&vehicle>=-1&&vehicle<8&&[x,y,z,yaw].every(Number.isFinite)
+ return Number.isInteger(vehicle)&&vehicle>=-1&&vehicle<11&&[x,y,z,yaw].every(Number.isFinite)
   &&Math.abs(x)<=125&&Math.abs(z)<=125&&y>=0&&y<=48&&Math.abs(yaw)<=Math.PI;
 }
 
