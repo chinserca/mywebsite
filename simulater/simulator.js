@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {setupWorkshop} from './workshop.js';
 
 const el = id => document.getElementById(id);
 const vehicles = [
@@ -58,7 +59,7 @@ function mesh(geometry,color,x,y,z,parent=scene) {
 function box(w,h,d,color,x,y,z,parent) {
   return mesh(new THREE.BoxGeometry(w,h,d),color,x,y,z,parent);
 }
-const ground=box(380,.4,380,0x839969,0,-.25,0);
+const ground=box(860,.4,860,0x839969,0,-.25,0);
 ground.castShadow=false;
 const texture=document.createElement('canvas');
 texture.width=texture.height=128;
@@ -115,9 +116,22 @@ for(const [x,z,height] of [[68,-33,22],[-49,-66,28]]){
   light.material.emissive.setHex(0xff3020);
   obstacles.push({x,z,radius:2.8,height:height+4.7});
 }
+for(let i=0;i<54;i++){
+  const angle=i*2.39996;
+  const radius=145+(i*37%200);
+  const x=Math.cos(angle)*radius,z=Math.sin(angle)*radius;
+  mesh(new THREE.CylinderGeometry(.24,.34,2.6,16),0x775c40,x,1.3,z);
+  mesh(new THREE.ConeGeometry(2.4,6.2,32),0x365f49,x,4.5,z);
+  obstacles.push({x,z,radius:2,height:7.6});
+}
+for(const [x,z] of [[210,-130],[-240,100],[130,245],[-160,-225]]){
+  box(14,7,11,0xd1c0a4,x,3.5,z);
+  mesh(new THREE.CylinderGeometry(0,9.3,4,4),0x70463f,x,9,z).rotation.y=Math.PI/4;
+  obstacles.push({x,z,width:9,depth:8,height:11});
+}
 for(let i=0;i<16;i++){
   const angle=i*Math.PI/8;
-  const hill=mesh(new THREE.IcosahedronGeometry(1,2),i%2?0x809f8a:0x8aa18a,Math.cos(angle)*155,0,Math.sin(angle)*155);
+  const hill=mesh(new THREE.IcosahedronGeometry(1,2),i%2?0x809f8a:0x8aa18a,Math.cos(angle)*400,0,Math.sin(angle)*400);
   hill.scale.set(25,15+i%4*4,21);
 }
 const routes = {
@@ -204,6 +218,7 @@ function createModel(config,remote=false){
     shell.material.roughness=.32;
     shell.material.metalness=.22;
     box(.68,.09,.92,0x223345,0,-.17,.1,group);
+    if(config.reinforced)box(1.18,.12,.9,0x405367,0,.1,.13,group);
     for(const x of [-.43,.43])box(.09,.12,.7,0x273741,x,-.22,.1,group);
 
     box(.4,.27,.18,0x101b2d,0,-.07,-.88,group);
@@ -214,7 +229,7 @@ function createModel(config,remote=false){
     for(const x of [-1,1])for(const z of [-.88,.88]){
       const arm=box(.98,.14,.23,config.paint,x*.62,-.01,z*.8,group);
       arm.rotation.y=x*z*.34;
-      mesh(new THREE.CylinderGeometry(.21,.17,.21,24),0x243446,x,.04,z,group);
+      mesh(new THREE.CylinderGeometry(.21,.17,.21,24),config.motorBoost?0xe6a94d:0x243446,x,.04,z,group);
       mesh(new THREE.CylinderGeometry(.085,.085,.09,18),0xa5bacb,x,.24,z,group);
       const light=mesh(new THREE.SphereGeometry(.075,12,8),z<0?0xf85750:0x43f4a6,x,.03,z+.22,group);
       light.material.emissive.copy(light.material.color);
@@ -309,6 +324,11 @@ for(const config of vehicles){
   button.onclick=()=>choose(config);
   el('vehicles').append(button);
 }
+const createButton=document.createElement('button');
+createButton.id='createDrone';
+createButton.textContent='Create';
+el('vehicles').append(createButton);
+setupWorkshop(vehicles,choose);
 el('garage').onclick=()=>{
   keys.clear();
   clearCourse();
@@ -384,12 +404,21 @@ for(const button of document.querySelectorAll('[data-key]')){
 const direction=(positive,negative)=>Number(keys.has(positive))-Number(keys.has(negative));
 const wish=new THREE.Vector3();
 const proposed=new THREE.Vector3();
-const lowerBound=new THREE.Vector3(-125,0,-125);
-const upperBound=new THREE.Vector3(125,48,125);
+const wind=new THREE.Vector3();
+let lastWindReadout=-Infinity;
+const lowerBound=new THREE.Vector3(-360,0,-360);
+const upperBound=new THREE.Vector3(360,48,360);
 let last=performance.now();
 function tick(now){
   const dt=Math.min(.05,(now-last)/1000);
   last=now;
+  wind.set(2.2+Math.sin(now*.0007)*1.8,0,Math.cos(now*.00053)*1.5);
+  if(vehicle&&now-lastWindReadout>250){
+    const compass=['N','NE','E','SE','S','SW','W','NW'];
+    const directionIndex=Math.round(Math.atan2(wind.x,-wind.z)/(Math.PI/4));
+    el('wind').textContent='Wind · '+wind.length().toFixed(1)+' m/s toward '+compass[(directionIndex+8)%8];
+    lastWindReadout=now;
+  }
   if(vehicle){
     const drone=vehicle.kind==='drone';
     const lift=health>0&&vehicle.thrusters&&keys.has(' ');
@@ -419,6 +448,7 @@ function tick(now){
       if(wish.lengthSq()>1)wish.normalize();
       wish.multiplyScalar(vehicle.speed).applyAxisAngle(up,yaw);
       wish.y=direction('arrowup','arrowdown')*vehicle.climb;
+      if(!landed)wish.addScaledVector(wind,.35+position.y*.012);
       if(landed)wish.set(0,0,0);
       else if(keys.has('arrowdown')&&!keys.has('arrowup')&&position.y<1.8){
         wish.x=wish.z=0;
@@ -517,7 +547,7 @@ async function syncPeers(){
   try{
     const response=await fetch('/api/simulator-presence',{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({id:playerId,vehicle:vehicles.indexOf(vehicle),x:position.x,y:position.y,z:position.z,yaw:Math.atan2(Math.sin(yaw),Math.cos(yaw))}),
+      body:JSON.stringify({id:playerId,vehicle:vehicle?.baseIndex??vehicles.indexOf(vehicle),x:position.x,y:position.y,z:position.z,yaw:Math.atan2(Math.sin(yaw),Math.cos(yaw))}),
       signal:AbortSignal.timeout(4500)
     });
     if(!response.ok)throw new Error('Connection unavailable');

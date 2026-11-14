@@ -40,3 +40,17 @@ h1 { margin: 0; }
   font-size: 12px;
   white-space: nowrap;
 }
+#workshop {
+  width: min(640px, calc(100% - 26px));
+  max-height: 90vh;
+  border: 1px solid #6595b4;
+  border-radius: 16px;
+  padding: 20px;
+  background: #142a3e;
+  color: #f1f7fc;
+}
+#workshop::backdrop { background: #0a1424b8; }
+#workshop h2 { margin-top: 0; }
+#closeWorkshop { margin-top: 14px; }
+.workshop-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.workshop-row button[draggable] { cursor: grab; background: #285472; }
