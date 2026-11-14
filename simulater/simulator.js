@@ -279,7 +279,7 @@ function resetVehicle(){
   health=vehicle.health;
   lastImpact=-Infinity;
   spinRemaining=0;
-  landed=false;
+  landed=vehicle.kind==='drone';
   battery=100;
   emergencyLanding=false;
   collisionFall=false;
@@ -290,7 +290,7 @@ function resetVehicle(){
   updateHealth();
   speed=0;
   velocity.set(0,0,0);
-  position.set(vehicle.kind==='drone'?-26:0,vehicle.kind==='drone'?1.05:0,vehicle.kind==='drone'?10:6);
+  position.set(vehicle.kind==='drone'?-26:0,landed?landingHeight:0,vehicle.kind==='drone'?10:6);
   model.position.copy(position);
   model.rotation.set(0,0,0);
   clearCourse();
