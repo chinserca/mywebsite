@@ -397,6 +397,10 @@ el('course').onclick=()=>{
   showGate();
 };
 const movement=['w','a','s','d','arrowleft','arrowright','arrowup','arrowdown',' ','shift'];
+el('hud').addEventListener('click',event=>{
+  // Return Space to vehicle controls after a mouse or touch activation.
+  if(event.detail>0&&event.target instanceof HTMLButtonElement)event.target.blur();
+});
 addEventListener('keydown',event=>{
   if(!vehicle||event.ctrlKey||event.metaKey||event.altKey)return;
   const key=event.key.toLowerCase();
