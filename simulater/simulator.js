@@ -61,80 +61,113 @@ function mesh(geometry,color,x,y,z,parent=scene) {
 function box(w,h,d,color,x,y,z,parent) {
   return mesh(new THREE.BoxGeometry(w,h,d),color,x,y,z,parent);
 }
-const ground=box(860,.4,860,0x839969,0,-.25,0);
+const ground=box(860,.4,860,0x687179,0,-.25,0);
 ground.castShadow=false;
-const texture=document.createElement('canvas');
-texture.width=texture.height=128;
-const ink=texture.getContext('2d');
-ink.fillStyle='#ddd';ink.fillRect(0,0,128,128);
-for(let i=0;i<2400;i++){
-  ink.fillStyle=i%2?'#c7c7c7':'#ebebeb';
-  ink.fillRect(i*71%128,(i*i*41+i*13)%128,1+i%3,1+i%2);
-}
-const grass=new THREE.CanvasTexture(texture);
-grass.colorSpace=THREE.SRGBColorSpace;
-grass.wrapS=grass.wrapT=THREE.RepeatWrapping;
-grass.repeat.set(72,72);
-ground.material.map=grass;
-const road = [[0,7],[0,-65],[54,-65],[54,-2],[0,-2]];
-for(let i=0;i<road.length-1;i++){
-  const [x,z]=road[i], [nx,nz]=road[i+1];
-  const horizontal=z===nz;
-  box(horizontal?Math.abs(nx-x)+9:9,.04,horizontal?9:Math.abs(nz-z)+9,0x4e5b69,(x+nx)/2,.01,(z+nz)/2);
-  const length=Math.hypot(nx-x,nz-z);
-  for(let along=5;along<length;along+=7){
-    const t=along/length;
-    box(horizontal?3:.18,.015,horizontal?.18:3,0xf5d898,x+(nx-x)*t,.04,z+(nz-z)*t);
+const obstacles=[];
+const avenueXs=[-324,-270,-216,-162,-108,-54,0,54,108,162,216,270,324];
+const streetZs=[-317,-254,-191,-128,-65,-2,61,124,187,250,313];
+
+const asphalt=material(0x343c46);
+const concrete=material(0xaeb4b8);
+const lineMaterial=material(0xf2e7c4);
+const laneMarks=[];
+for(const x of avenueXs){
+  const avenue=new THREE.Mesh(new THREE.BoxGeometry(11,.045,700),asphalt);
+  avenue.position.set(x,.015,0);
+  avenue.receiveShadow=true;
+  scene.add(avenue);
+  for(let z=-340;z<=340;z+=8){
+    if(streetZs.some(street=>Math.abs(street-z)<7))continue;
+    laneMarks.push([x,z,false]);
   }
 }
-box(15,.05,15,0x334f65,-26,.025,10);
-mesh(new THREE.RingGeometry(4.8,5.05,48),0xa9ebf7,-26,.06,10).rotation.x=-Math.PI/2;
-for(let i=0;i<10;i++){
-  const x=7+i*4.5;
-  box(2.9,.09,.27,0xe5dfc6,x,.08,-69.7);
-  box(2.9,.09,.27,0xe5dfc6,x,.08,-60.3);
+for(const z of streetZs){
+  const street=new THREE.Mesh(new THREE.BoxGeometry(700,.045,11),asphalt);
+  street.position.set(0,.015,z);
+  street.receiveShadow=true;
+  scene.add(street);
+  for(let x=-340;x<=340;x+=8){
+    if(avenueXs.some(avenue=>Math.abs(avenue-x)<7))continue;
+    laneMarks.push([x,z,true]);
+  }
 }
-const obstacles=[];
-for(let i=0;i<38;i++){
-  const x=(i*29%162)-80,z=(i*43%154)-92;
-  if((Math.abs(x)<9&&z>-74&&z<14)||(x>-10&&x<64&&(Math.abs(z+65)<9||Math.abs(z+2)<9))||(Math.abs(x-54)<9&&z>-74&&z<8)||Math.hypot(x+26,z-10)<12)continue;
-  mesh(new THREE.CylinderGeometry(.24,.34,2.6,24),0x775c40,x,1.3,z);
-  mesh(new THREE.ConeGeometry(2.1,5.2,48),i%2?0x365f49:0x477b54,x,4.25,z);
-  obstacles.push({x,z,radius:1.65,height:7});
+const marks=new THREE.InstancedMesh(new THREE.BoxGeometry(.15,.012,3.1),lineMaterial,laneMarks.length);
+const markerTransform=new THREE.Object3D();
+laneMarks.forEach(([x,z,horizontal],i)=>{
+  markerTransform.position.set(x,.045,z);
+  markerTransform.rotation.y=horizontal?Math.PI/2:0;
+  markerTransform.updateMatrix();
+  marks.setMatrixAt(i,markerTransform.matrix);
+});
+scene.add(marks);
+
+const facadeCanvas=document.createElement('canvas');
+facadeCanvas.width=128;
+facadeCanvas.height=256;
+const facadeInk=facadeCanvas.getContext('2d');
+facadeInk.fillStyle='#b4bdc5';
+facadeInk.fillRect(0,0,128,256);
+for(let floor=0;floor<8;floor++)for(let column=0;column<4;column++){
+  const x=column*32+6,y=floor*32+6;
+  facadeInk.fillStyle=(floor*7+column)%5===0?'#d3bc8a':'#304858';
+  facadeInk.fillRect(x,y,21,19);
+  facadeInk.fillStyle='#708c9c';
+  facadeInk.fillRect(x+2,y+2,17,3);
 }
-for(const [x,z,color] of [[17,13,0xe8d5b7],[32,13,0xd8e0e3],[47,13,0xe3bb9b],[-16,-36,0xd7d8b8]]){
-  box(8,4.6,7,color,x,2.3,z);
-  const roof=mesh(new THREE.CylinderGeometry(0,5.9,2.5,4),0x723e39,x,5.8,z);
-  roof.rotation.y=Math.PI/4;
-  box(1.3,2.2,.12,0x584337,x,1.1,z+3.53);
-  for(const offset of [-2.4,2.4])box(1.4,1.22,.14,0x86c5e1,x+offset,2.75,z+3.54);
-  obstacles.push({x,z,width:4.2,depth:3.7,height:7.1});
+const facade=new THREE.CanvasTexture(facadeCanvas);
+facade.colorSpace=THREE.SRGBColorSpace;
+const facadeColors=[0xc3d7dd,0xdbc8b0,0x9baab1,0xd3d7d6];
+const facades=facadeColors.map(color=>{
+  const side=material(color);
+  side.map=facade;
+  const roof=material(0x656c72);
+  return [side,side,roof,roof,side,side];
+});
+for(let column=0;column<avenueXs.length-1;column++){
+  for(let row=0;row<streetZs.length-1;row++){
+    const x=(avenueXs[column]+avenueXs[column+1])/2;
+    const z=(streetZs[row]+streetZs[row+1])/2;
+    const block=new THREE.Mesh(new THREE.BoxGeometry(42,.12,51),concrete);
+    block.position.set(x,.02,z);
+    block.receiveShadow=true;
+    scene.add(block);
+    const plaza=x===-27&&z===29.5;
+    const flightCorridor=z===-33.5&&Math.abs(x)<35;
+    if(plaza||flightCorridor)continue;
+    const center=1-Math.min(1,Math.hypot(x,z)/360);
+    for(const offset of [-12,12]){
+      const tower=(column*7+row*3+(offset>0?1:0))%9===0;
+      const height=7+Math.round(center*(tower?43:24))+(column*13+row*7+offset+12)%12;
+      const width=16+(column+row)%4;
+      const depth=19+(column*3+row)%7;
+      const building=new THREE.Mesh(new THREE.BoxGeometry(width,height,depth),facades[(column+row+(offset>0?1:0))%facades.length]);
+      building.position.set(x+offset,height/2,z+(offset>0?9:-9));
+      building.castShadow=building.receiveShadow=true;
+      scene.add(building);
+      if(tower){
+        box(width*.56,2,depth*.55,0x58656c,building.position.x,height+1,building.position.z);
+        obstacles.push({x:building.position.x,z:building.position.z,width:width*.28,depth:depth*.275,height:height+2});
+      }
+      obstacles.push({x:building.position.x,z:building.position.z,width:width/2,depth:depth/2,height});
+    }
+  }
 }
-for(const [x,z,height] of [[68,-33,22],[-49,-66,28]]){
-  mesh(new THREE.CylinderGeometry(1.2,2.1,height,16),0x6e8090,x,height/2,z);
-  mesh(new THREE.CylinderGeometry(3.1,2.3,3,24),0x334e61,x,height,z);
-  mesh(new THREE.CylinderGeometry(.11,.16,3,12),0xb9cbd3,x,height+2.8,z);
-  const light=mesh(new THREE.SphereGeometry(.28,16,12),0xff4d40,x,height+4.4,z);
-  light.material.emissive.setHex(0xff3020);
-  obstacles.push({x,z,radius:2.8,height:height+4.7});
+box(15,.05,15,0x334f65,-26,.105,10);
+mesh(new THREE.RingGeometry(4.8,5.05,48),0xa9ebf7,-26,.14,10).rotation.x=-Math.PI/2;
+box(28,.04,22,0x769477,-27,.105,38);
+box(3,.025,22,0xbcb8a4,-27,.14,38);
+for(const [x,z] of [[-42,18],[-12,18],[-42,40],[-12,40],[-35,46],[-18,46],[-42,-14],[39,-14]]){
+  box(6,.15,6,0x527050,x,.14,z);
+  mesh(new THREE.CylinderGeometry(.27,.39,3,20),0x78634d,x,1.6,z);
+  const crown=mesh(new THREE.SphereGeometry(2.35,28,18),0x477554,x,4.4,z);
+  crown.scale.y=1.25;
+  obstacles.push({x,z,radius:2.35,height:7.4});
 }
-for(let i=0;i<54;i++){
-  const angle=i*2.39996;
-  const radius=145+(i*37%200);
-  const x=Math.cos(angle)*radius,z=Math.sin(angle)*radius;
-  mesh(new THREE.CylinderGeometry(.24,.34,2.6,16),0x775c40,x,1.3,z);
-  mesh(new THREE.ConeGeometry(2.4,6.2,32),0x365f49,x,4.5,z);
-  obstacles.push({x,z,radius:2,height:7.6});
-}
-for(const [x,z] of [[210,-130],[-240,100],[130,245],[-160,-225]]){
-  box(14,7,11,0xd1c0a4,x,3.5,z);
-  mesh(new THREE.CylinderGeometry(0,9.3,4,4),0x70463f,x,9,z).rotation.y=Math.PI/4;
-  obstacles.push({x,z,width:9,depth:8,height:11});
-}
-for(let i=0;i<16;i++){
-  const angle=i*Math.PI/8;
-  const hill=mesh(new THREE.IcosahedronGeometry(1,2),i%2?0x809f8a:0x8aa18a,Math.cos(angle)*400,0,Math.sin(angle)*400);
-  hill.scale.set(25,15+i%4*4,21);
+for(const [x,z] of [[0,-65],[54,-65],[0,-2],[54,-2]]){
+  for(let stripe=-4;stripe<=4;stripe+=2){
+    box(.9,.015,2.4,0xf4f1dc,x+stripe,.05,z+6.5);
+    box(2.4,.015,.9,0xf4f1dc,x+6.5,.05,z+stripe);
+  }
 }
 const routes = {
   drone:[[-26,8,-13],[-48,17,-35],[-15,24,-63],[21,13,-40],[-26,3,10]],
@@ -218,31 +251,72 @@ function createModel(config,remote=false){
       }
     }
   }else{
+    const modelName=config.name.replace(/ Custom$/,'');
+    const avata=modelName==='DJI Avata 2';
+    const neo=modelName==='DJI Neo';
+    const racing=/FPV Racer|Long Range FPV|Micro Whoop|Cinewhoop/.test(modelName);
+    const cameraDrone=/DJI (Mini|Air|Mavic)|Horizon Explorer/.test(modelName);
+    const guarded=config.bladeGuards;
+    const bodyWidth=avata?.36:neo?.34:racing?.31:cameraDrone?.43:.54;
+    const armSpan=neo?.76:avata?.88:cameraDrone?1.02:1;
+    const armReach=neo?.7:avata?.8:cameraDrone?.9:.88;
     const shell=mesh(new THREE.SphereGeometry(1,32,18),config.paint,0,0,0,group);
-    shell.scale.set(.66,.24,config.bladeGuards?.85:1.02);
-    shell.material.roughness=.32;
-    shell.material.metalness=.22;
-    box(.68,.09,.92,0x223345,0,-.17,.1,group);
+    shell.scale.set(bodyWidth,avata?.31:.23,neo?.66:.92);
+    shell.material.roughness=.48;
+    const batteryCase=box(bodyWidth*1.46,.11,.76,0x30343a,0,.16,.2,group);
+    batteryCase.material.roughness=.56;
+    for(let i=0;i<4;i++){
+      box(.034,.018,.045,i===3?0x84a18b:0x70df9b,(i-1.5)*.062,.224,.47,group);
+    }
+    box(bodyWidth*1.7,.09,.92,0x262c33,0,-.16,.1,group);
     if(config.reinforced)box(1.18,.12,.9,0x405367,0,.1,.13,group);
-    for(const x of [-.43,.43])box(.09,.12,.7,0x273741,x,-.22,.1,group);
+    for(const x of [-bodyWidth,bodyWidth]){
+      box(.09,.1,.65,0x2e3337,x,-.23,.13,group);
+      if(avata||racing)box(.06,.06,.78,0x20252b,x,.02,.18,group);
+    }
 
-    box(.4,.27,.18,0x101b2d,0,-.07,-.88,group);
-    const lens=mesh(new THREE.CylinderGeometry(.13,.16,.12,24),0x426f9c,0,-.07,-1,group);
+    const cameraY=avata||racing?.05:-.14;
+    const cameraZ=neo?-.65:-.84;
+    if(cameraDrone)box(.53,.22,.21,config.paint,0,-.04,cameraZ+.02,group);
+    box(cameraDrone?.36:.32,.26,.25,0x191d23,0,cameraY,cameraZ,group);
+    const bezel=mesh(new THREE.CylinderGeometry(.116,.128,.08,28),0x090e14,0,cameraY,cameraZ-.14,group);
+    bezel.rotation.x=Math.PI/2;
+    const lens=mesh(new THREE.CylinderGeometry(.081,.098,.045,28),0x32536d,0,cameraY,cameraZ-.19,group);
     lens.rotation.x=Math.PI/2;
-    lens.material.roughness=.12;
-    for(const x of [-.39,.39])box(.13,.09,.07,0x63e8ba,x,-.04,.85,group);
-    for(const x of [-1,1])for(const z of [-.88,.88]){
-      const arm=box(.98,.14,.23,config.paint,x*.62,-.01,z*.8,group);
-      arm.rotation.y=x*z*.34;
-      mesh(new THREE.CylinderGeometry(.21,.17,.21,24),config.motorBoost?0xe6a94d:0x243446,x,.04,z,group);
-      mesh(new THREE.CylinderGeometry(.085,.085,.09,18),0xa5bacb,x,.24,z,group);
-      const light=mesh(new THREE.SphereGeometry(.075,12,8),z<0?0xf85750:0x43f4a6,x,.03,z+.22,group);
-      light.material.emissive.copy(light.material.color);
+    lens.material.roughness=.09;
+    if(modelName==='DJI Mavic 3 Pro'){
+      for(const x of [-.115,.115])mesh(new THREE.SphereGeometry(.046,14,8),0x486781,x,cameraY+.065,cameraZ-.145,group);
+    }
+    for(const sign of [-1,1]){
+      if(cameraDrone)mesh(new THREE.SphereGeometry(.06,14,8),0x141a22,sign*bodyWidth*.65,.04,-.69,group);
+      for(const direction of [-1,1]){
+        const x=sign*armSpan,z=direction*armReach;
+        const rootX=sign*bodyWidth*.62,rootZ=direction*.32;
+        const arm=box(Math.hypot(x-rootX,z-rootZ),.135,guarded?.21:.17,racing?0x2c3036:config.paint,(x+rootX)/2,0,(z+rootZ)/2,group);
+        arm.rotation.y=-Math.atan2(z-rootZ,x-rootX);
+        mesh(new THREE.CylinderGeometry(.175,.155,.18,24),config.motorBoost?0xb88848:0x30343a,x,.09,z,group);
+        mesh(new THREE.CylinderGeometry(.068,.068,.03,18),0x93999c,x,.22,z,group);
+        const light=mesh(new THREE.SphereGeometry(.075,12,8),z<0?0xf85750:0x43f4a6,x,.03,z+.22,group);
+        light.material.emissive.copy(light.material.color);
 
-      const rotor=box(.94,.035,.12,0x182838,x,.2,z,group);
-      if(!remote)rotors.push(rotor);
-      if(config.bladeGuards){
-        mesh(new THREE.TorusGeometry(.56,.055,8,28),0x566677,x,.18,z,group).rotation.x=-Math.PI/2;
+        const rotor=new THREE.Group();
+        rotor.position.set(x,.205,z);
+        group.add(rotor);
+        const blades=guarded||racing?3:2;
+        const bladeLength=neo?.28:guarded?.37:.46;
+        for(let i=0;i<blades;i++){
+          const angle=i*Math.PI*2/blades;
+          const blade=mesh(new THREE.SphereGeometry(1,12,8),0x22282e,Math.cos(angle)*bladeLength*.54,0,Math.sin(angle)*bladeLength*.54,rotor);
+          blade.scale.set(bladeLength*.56,.016,.05);
+          blade.rotation.y=-angle+.13;
+        }
+        if(!remote)rotors.push(rotor);
+        if(guarded){
+          const ductRadius=bladeLength+.065;
+          const duct=mesh(new THREE.CylinderGeometry(ductRadius,ductRadius,.13,36,1,true),avata?0x30363c:config.paint,x,.16,z,group);
+          duct.material.side=THREE.DoubleSide;
+          mesh(new THREE.TorusGeometry(ductRadius,.025,8,36),0x444b52,x,.23,z,group).rotation.x=-Math.PI/2;
+        }
       }
     }
   }
