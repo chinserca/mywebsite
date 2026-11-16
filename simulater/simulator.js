@@ -485,7 +485,12 @@ addEventListener('keydown',event=>{
   const key=event.key.toLowerCase();
   if(key===' '&&event.target instanceof HTMLElement&&event.target.closest('button,a'))return;
   if(key==='c'&&!event.repeat){toggleCamera();return;}
-  if(movement.includes(key)){event.preventDefault();if(health)keys.add(key);}
+  if(movement.includes(key)){
+    event.preventDefault();
+    if(!health)return;
+    if(event.target instanceof HTMLButtonElement)event.target.blur();
+    keys.add(key);
+  }
 });
 addEventListener('keyup',event=>keys.delete(event.key.toLowerCase()));
 addEventListener('blur',()=>keys.clear());
