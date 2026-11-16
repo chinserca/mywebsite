@@ -64,6 +64,7 @@ function box(w,h,d,color,x,y,z,parent) {
 const ground=box(860,.4,860,0x687179,0,-.25,0);
 ground.castShadow=false;
 const obstacles=[];
+const roofs=[];
 const avenueXs=[-324,-270,-216,-162,-108,-54,0,54,108,162,216,270,324];
 const streetZs=[-317,-254,-191,-128,-65,-2,61,124,187,250,313];
 
@@ -146,9 +147,13 @@ for(let column=0;column<avenueXs.length-1;column++){
       scene.add(building);
       if(tower){
         box(width*.56,2,depth*.55,0x58656c,building.position.x,height+1,building.position.z);
-        obstacles.push({x:building.position.x,z:building.position.z,width:width*.28,depth:depth*.275,height:height+2});
+        const roofCap={x:building.position.x,z:building.position.z,width:width*.28,depth:depth*.275,height:height+2};
+        obstacles.push(roofCap);
+        roofs.push(roofCap);
       }
-      obstacles.push({x:building.position.x,z:building.position.z,width:width/2,depth:depth/2,height});
+      const buildingBounds={x:building.position.x,z:building.position.z,width:width/2,depth:depth/2,height};
+      obstacles.push(buildingBounds);
+      roofs.push(buildingBounds);
     }
   }
 }
@@ -501,6 +506,14 @@ const wind=new THREE.Vector3();
 let lastWindReadout=-Infinity;
 const lowerBound=new THREE.Vector3(-360,0,-360);
 const upperBound=new THREE.Vector3(360,48,360);
+function surfaceBelow(x,z,maxY,clearance){
+  let surface=clearance;
+  for(const roof of roofs){
+    const top=roof.height+clearance;
+    if(top<=maxY&&top>surface&&Math.abs(x-roof.x)<=roof.width&&Math.abs(z-roof.z)<=roof.depth)surface=top;
+  }
+  return surface;
+}
 let last=performance.now();
 function tick(now){
   const dt=Math.min(.05,(now-last)/1000);
@@ -514,13 +527,14 @@ function tick(now){
   }
   if(vehicle){
     const drone=vehicle.kind==='drone';
+    const clearance=drone?landingHeight:0;
     const lift=health>0&&vehicle.thrusters&&keys.has(' ');
     const boost=health>0&&vehicle.thrusters&&keys.has('shift');
     for(const flame of liftFlames)flame.visible=!!lift;
     for(const flame of boostFlames)flame.visible=!!boost;
     const easing=1-Math.exp(-dt*vehicle.response);
     if(drone&&(!health||collisionFall)){
-      if(position.y>landingHeight){
+      if(position.y>surfaceBelow(position.x,position.z,position.y,clearance)){
         velocity.y=Math.max(-32,velocity.y-14*dt);
         model.rotation.x+=dt*3;
         model.rotation.z+=dt*4;
@@ -576,19 +590,20 @@ function tick(now){
       velocity.set(-Math.sin(yaw)*speed,vertical,-Math.cos(yaw)*speed);
       wheels.forEach(wheel=>wheel.rotation.x-=speed*dt/.43);
     }
-    lowerBound.y=drone?landingHeight:0;
+    lowerBound.y=clearance;
     upperBound.y=drone||vehicle.thrusters?48:0;
     proposed.copy(position).addScaledVector(velocity,dt).clamp(lowerBound,upperBound);
     if(proposed.x===lowerBound.x&&velocity.x<0||proposed.x===upperBound.x&&velocity.x>0)velocity.x=0;
     if(proposed.z===lowerBound.z&&velocity.z<0||proposed.z===upperBound.z&&velocity.z>0)velocity.z=0;
-    const wreckLanded=drone&&(!health||collisionFall)&&proposed.y===landingHeight;
-    if(proposed.y===lowerBound.y&&velocity.y<0){
+    const surface=velocity.y<=0?surfaceBelow(proposed.x,proposed.z,position.y,clearance):clearance;
+    const touchingSurface=proposed.y<=surface;
+    const wreckLanded=drone&&(!health||collisionFall)&&touchingSurface;
+    if(touchingSurface&&velocity.y<0){
+      proposed.y=surface;
       velocity.y=0;
       if(drone){
         landed=true;
         velocity.set(0,0,0);
-        proposed.x=position.x;
-        proposed.z=position.z;
       }
     }else if(proposed.y===upperBound.y&&velocity.y>0)velocity.y=0;
     const blocked=obstacles.some(({x,z,radius,width,depth,height})=>{
@@ -621,7 +636,7 @@ function tick(now){
     const groundSpeed=Math.hypot(velocity.x,velocity.z);
     sound.update(vehicle,groundSpeed,velocity.y,wind.length(),keys.has('w')||keys.has('s'),Number(!!lift)+Number(!!boost),health>0&&(!drone||!landed&&!collisionFall),firstPerson);
     const kmh=Math.round(groundSpeed*3.6);
-    el('telemetry').textContent=kmh+' km/h'+(drone||vehicle.thrusters?' · Altitude '+position.y.toFixed(1)+' m'+(drone&&!health?(position.y>landingHeight?' · Falling':' · Crashed'):landed?' · Landed':''):'');
+    el('telemetry').textContent=kmh+' km/h'+(drone||vehicle.thrusters?' · Altitude '+position.y.toFixed(1)+' m'+(drone&&!health?(wreckLanded?' · Crashed':' · Falling'):landed?' · Landed':''):'');
     if(raceStart!==null&&position.distanceTo(marker.position)<4){
       nextGate++;
       if(nextGate<routes[vehicle.kind].length)showGate();
