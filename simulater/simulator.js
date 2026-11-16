@@ -1,7 +1,9 @@
 import * as THREE from 'three';
-import {setupWorkshop} from './workshop.js';
+import {setupWorkshop} from './workshop.js?v=fpv-camera';
+import {setupSound} from './sound.js';
 
 const el = id => document.getElementById(id);
+const sound=setupSound(el('sound'));
 const vehicles = [
   {name:'Tesla Roadster', kind:'car', paint:0xef4b46, health:160, thrusters:true, speed:35, response:3, description:'Electric sports car · fast on the road'},
   {name:'DJI Avata 2', kind:'drone', batterySeconds:240, paint:0x39485e, health:120, fpv:true, bladeGuards:true, speed:26, climb:13, response:4.5, description:'FPV drone · quick and agile'},
@@ -149,6 +151,7 @@ let health=0, lastImpact=-Infinity, spinRemaining=0;
 let landed=false;
 let battery=100, emergencyLanding=false;
 let collisionFall=false, lastDroneCrash=-Infinity;
+let vehicleRun=0;
 const landingHeight=.42;
 const velocity = new THREE.Vector3();
 const position = new THREE.Vector3();
@@ -273,6 +276,7 @@ function clearCourse(){
   el('course').setAttribute('aria-pressed','false');
 }
 function resetVehicle(){
+  vehicleRun++;
   keys.clear();
   yaw=0;
   stabilizedHeading=0;
@@ -359,6 +363,7 @@ function updateHealth(){
 }
 function damage(amount,now){
   if(amount<=0||now-lastImpact<450)return;
+  sound.impact(amount);
   health=Math.max(0,health-Math.ceil(amount));
   lastImpact=now;
   updateHealth();
@@ -395,6 +400,7 @@ const movement=['w','a','s','d','arrowleft','arrowright','arrowup','arrowdown','
 addEventListener('keydown',event=>{
   if(!vehicle||event.ctrlKey||event.metaKey||event.altKey)return;
   const key=event.key.toLowerCase();
+  if(key===' '&&event.target instanceof HTMLElement&&event.target.closest('button,a'))return;
   if(key==='c'&&!event.repeat){toggleCamera();return;}
   if(movement.includes(key)){event.preventDefault();if(health)keys.add(key);}
 });
@@ -453,7 +459,7 @@ function tick(now){
         stabilizedHeading=yaw;
       }
       if(landed){
-        battery=Math.min(100,battery+dt*5);
+        battery=Math.min(100,battery+dt*(vehicle.quickCharge?10:5));
         if(battery>=10)emergencyLanding=false;
         if(!emergencyLanding&&keys.has('arrowup'))landed=false;
       }else{
@@ -466,7 +472,7 @@ function tick(now){
       if(wish.lengthSq()>1)wish.normalize();
       wish.multiplyScalar(vehicle.speed).applyAxisAngle(up,yaw);
       wish.y=direction('arrowup','arrowdown')*vehicle.climb;
-      if(!landed)wish.addScaledVector(wind,.35+position.y*.012);
+      if(!landed)wish.addScaledVector(wind,(.35+position.y*.012)*(vehicle.windStabilizer?.55:1));
       if(landed)wish.set(0,0,0);
       else if(keys.has('arrowdown')&&!keys.has('arrowup')&&position.y<1.8){
         wish.x=wish.z=0;
@@ -495,6 +501,8 @@ function tick(now){
     lowerBound.y=drone?landingHeight:0;
     upperBound.y=drone||vehicle.thrusters?48:0;
     proposed.copy(position).addScaledVector(velocity,dt).clamp(lowerBound,upperBound);
+    if(proposed.x===lowerBound.x&&velocity.x<0||proposed.x===upperBound.x&&velocity.x>0)velocity.x=0;
+    if(proposed.z===lowerBound.z&&velocity.z<0||proposed.z===upperBound.z&&velocity.z>0)velocity.z=0;
     const wreckLanded=drone&&(!health||collisionFall)&&proposed.y===landingHeight;
     if(proposed.y===lowerBound.y&&velocity.y<0){
       if(position.y>lowerBound.y)damage((-velocity.y-6)*3,now);
@@ -533,7 +541,9 @@ function tick(now){
       el('battery').value=battery;
       el('batteryValue').textContent=Math.ceil(battery)+'%'+(health&&emergencyLanding&&!landed?' · Emergency descent':health&&landed&&battery<100?' · Charging':'');
     }
-    const kmh=Math.round(Math.hypot(velocity.x,velocity.z)*3.6);
+    const groundSpeed=Math.hypot(velocity.x,velocity.z);
+    sound.update(vehicle,groundSpeed,velocity.y,wind.length(),keys.has('w')||keys.has('s'),Number(!!lift)+Number(!!boost),health>0&&(!drone||!landed&&!collisionFall),firstPerson);
+    const kmh=Math.round(groundSpeed*3.6);
     el('telemetry').textContent=kmh+' km/h'+(drone||vehicle.thrusters?' · Altitude '+position.y.toFixed(1)+' m'+(drone&&!health?(position.y>landingHeight?' · Falling':' · Crashed'):landed?' · Landed':''):'');
     if(raceStart!==null&&position.distanceTo(marker.position)<4){
       nextGate++;
@@ -545,7 +555,7 @@ function tick(now){
         el('raceStatus').textContent='Course finished in '+elapsed.toFixed(1)+' s · Session best '+best[vehicle.name].toFixed(1)+' s';
       }
     }
-  }
+  }else sound.update(null,0,0,0,0,0,false,false);
   sun.target.position.set(position.x,0,position.z);
   sun.position.copy(sunOffset).add(sun.target.position);
   placeCamera(dt);
@@ -570,7 +580,7 @@ function removePeer(id,peer){
   peers.delete(id);
 }
 async function syncPeers(){
-  const sendingVehicle=vehicle;
+  const sendingRun=vehicleRun;
   const canCollide=vehicle?.kind==='drone'&&health>0&&!collisionFall&&performance.now()-lastDroneCrash>6500;
   try{
     const response=await fetch('/api/simulator-presence',{
@@ -580,7 +590,7 @@ async function syncPeers(){
     });
     if(!response.ok)throw new Error('Connection unavailable');
     const {peers:players,collision}=await response.json();
-    if(collision&&canCollide&&vehicle===sendingVehicle&&health>0){
+    if(collision&&canCollide&&vehicle&&vehicleRun===sendingRun&&health>0){
       const now=performance.now();
       lastDroneCrash=now;
       lastImpact=-Infinity;
