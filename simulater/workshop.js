@@ -5,7 +5,9 @@ const upgrades = [
  {name:'Stabilized camera', apply:{fpv:false}, slot:'Camera mount'},
  {name:'FPV camera', apply:{fpv:true}, slot:'Camera mount'},
  {name:'Wind stabilizer', apply:{windStabilizer:true}, slot:'Flight controller'},
- {name:'Quick-charge module', apply:{quickCharge:true}, slot:'Charging port'}
+ {name:'Quick-charge module', apply:{quickCharge:true}, slot:'Charging port'},
+ {name:'Precision controller', apply:{responseBoost:1.25}, slot:'Flight controller'},
+ {name:'High-lift propellers', apply:{extraClimb:3}, slot:'Propellers'}
 ];
 
 const batteryPacks=[
@@ -112,6 +114,8 @@ export function setupWorkshop(vehicles,launch){
    if(blank)Object.assign(config,{paint:0x32b8a5,health:85,speed:18,climb:9});
    for(const index of installed)Object.assign(config,upgrades[index].apply);
    if(config.motorBoost){config.speed+=5;config.climb+=2;}
+   if(config.extraClimb)config.climb+=config.extraClimb;
+   if(config.responseBoost)config.response*=config.responseBoost;
    if(config.reinforced)config.health+=35;
    dialog.close();
    launch(config);

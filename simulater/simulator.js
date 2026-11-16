@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {setupWorkshop} from './workshop.js?v=fpv-camera';
+import {setupWorkshop} from './workshop.js?v=flight-parts';
 import {setupSound} from './sound.js';
 
 const el = id => document.getElementById(id);
@@ -509,9 +509,8 @@ function tick(now){
     if(proposed.z===lowerBound.z&&velocity.z<0||proposed.z===upperBound.z&&velocity.z>0)velocity.z=0;
     const wreckLanded=drone&&(!health||collisionFall)&&proposed.y===landingHeight;
     if(proposed.y===lowerBound.y&&velocity.y<0){
-      if(position.y>lowerBound.y)damage((-velocity.y-6)*3,now);
       velocity.y=0;
-      if(drone&&(emergencyLanding||keys.has('arrowdown')&&!keys.has('arrowup'))){
+      if(drone){
         landed=true;
         velocity.set(0,0,0);
         proposed.x=position.x;
@@ -589,7 +588,7 @@ async function syncPeers(){
   try{
     const response=await fetch('/api/simulator-presence',{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({id:playerId,canCollide,vehicle:vehicle?.baseIndex??vehicles.indexOf(vehicle),x:position.x,y:position.y,z:position.z,yaw:Math.atan2(Math.sin(yaw),Math.cos(yaw))}),
+      body:JSON.stringify({id:playerId,run:sendingRun,canCollide,vehicle:vehicle?.baseIndex??vehicles.indexOf(vehicle),x:position.x,y:position.y,z:position.z,yaw:Math.atan2(Math.sin(yaw),Math.cos(yaw))}),
       signal:AbortSignal.timeout(4500)
     });
     if(!response.ok)throw new Error('Connection unavailable');

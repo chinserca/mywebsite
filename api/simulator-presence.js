@@ -4,6 +4,7 @@ const slotCount=16;
 const cars=new Set([0,4]);
 const lifetime=18;
 const slots=Array.from({length:slotCount},(_,i)=>'player-'+i);
+const collisionKey=({id,run})=>'collision-'+id+'-'+(run??0);
 
 function validPosition(value){
  if(!value||typeof value.id!=='string'||!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(value.id))return false;
@@ -22,7 +23,8 @@ module.exports=async function handler(req,res){
  }
  if(!validPosition(input))return res.status(400).json({error:'Invalid position'});
  const {id,x,y,z,yaw,vehicle}=input;
- const player={id,x,y,z,yaw,vehicle,canCollide:input.canCollide===true,seen:Date.now()};
+ const run=Number.isSafeInteger(input.run)&&input.run>=0?input.run:0;
+ const player={id,x,y,z,yaw,vehicle,run,canCollide:input.canCollide===true,seen:Date.now()};
  try{
   const active=(await Promise.all(slots.map(key=>cache.get(key))))
    .map(value=>validPosition(value)&&Number.isFinite(value.seen)&&player.seen-value.seen<lifetime*1000&&value.vehicle>=0?value:null);
@@ -40,15 +42,14 @@ module.exports=async function handler(req,res){
    .map(({id,x,y,z,yaw,vehicle})=>({id,x,y,z,yaw,vehicle}));
   let collision=false;
   if(vehicle>=0&&!cars.has(vehicle)&&input.canCollide===true){
-   const hit=await cache.get('collision-'+id);
-   collision=Boolean(hit)&&y>.65;
+   collision=Boolean(await cache.get(collisionKey(player)));
    if(!collision){
     const other=active.find(peer=>peer&&peer.id!==id&&peer.canCollide&&!cars.has(peer.vehicle)
      &&player.seen-peer.seen<3500&&(y>.65||peer.y>.65)
      &&Math.hypot(x-peer.x,z-peer.z)<2&&Math.abs(y-peer.y)<.7);
     if(other){
      collision=true;
-     await cache.set('collision-'+other.id,true,{ttl:6});
+     await cache.set(collisionKey(other),true,{ttl:6});
     }
    }
   }
