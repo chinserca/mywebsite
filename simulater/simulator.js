@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {setupWorkshop} from './workshop.js?v=flight-parts';
 import {setupSound} from './sound.js';
+import {buildDrone} from './drone-model.js';
 
 const el = id => document.getElementById(id);
 const sound=setupSound(el('sound'));
@@ -187,6 +188,15 @@ let vehicle, model, yaw=0, speed=0, firstPerson=false, nextGate=0, raceStart=nul
 let rotors=[],wheels=[],liftFlames=[],boostFlames=[];
 let health=0, lastImpact=-Infinity, spinRemaining=0;
 let landed=false;
+let hovering=false;
+function toggleHover(){
+  if(vehicle?.kind!=='drone'||!health||collisionFall||emergencyLanding)return;
+  hovering=!hovering;
+  velocity.set(0,0,0);
+  keys.clear();
+  el('hover').setAttribute('aria-pressed',String(hovering));
+}
+el('hover').onclick=toggleHover;
 let battery=100, emergencyLanding=false;
 let collisionFall=false, lastDroneCrash=-Infinity;
 let vehicleRun=0;
@@ -256,74 +266,7 @@ function createModel(config,remote=false){
       }
     }
   }else{
-    const modelName=config.name.replace(/ Custom$/,'');
-    const avata=modelName==='DJI Avata 2';
-    const neo=modelName==='DJI Neo';
-    const racing=/FPV Racer|Long Range FPV|Micro Whoop|Cinewhoop/.test(modelName);
-    const cameraDrone=/DJI (Mini|Air|Mavic)|Horizon Explorer/.test(modelName);
-    const guarded=config.bladeGuards;
-    const bodyWidth=avata?.36:neo?.34:racing?.31:cameraDrone?.43:.54;
-    const armSpan=neo?.76:avata?.88:cameraDrone?1.02:1;
-    const armReach=neo?.7:avata?.8:cameraDrone?.9:.88;
-    const shell=mesh(new THREE.SphereGeometry(1,32,18),config.paint,0,0,0,group);
-    shell.scale.set(bodyWidth,avata?.31:.23,neo?.66:.92);
-    shell.material.roughness=.48;
-    const batteryCase=box(bodyWidth*1.46,.11,.76,0x30343a,0,.16,.2,group);
-    batteryCase.material.roughness=.56;
-    for(let i=0;i<4;i++){
-      box(.034,.018,.045,i===3?0x84a18b:0x70df9b,(i-1.5)*.062,.224,.47,group);
-    }
-    box(bodyWidth*1.7,.09,.92,0x262c33,0,-.16,.1,group);
-    if(config.reinforced)box(1.18,.12,.9,0x405367,0,.1,.13,group);
-    for(const x of [-bodyWidth,bodyWidth]){
-      box(.09,.1,.65,0x2e3337,x,-.23,.13,group);
-      if(avata||racing)box(.06,.06,.78,0x20252b,x,.02,.18,group);
-    }
-
-    const cameraY=avata||racing?.05:-.14;
-    const cameraZ=neo?-.65:-.84;
-    if(cameraDrone)box(.53,.22,.21,config.paint,0,-.04,cameraZ+.02,group);
-    box(cameraDrone?.36:.32,.26,.25,0x191d23,0,cameraY,cameraZ,group);
-    const bezel=mesh(new THREE.CylinderGeometry(.116,.128,.08,28),0x090e14,0,cameraY,cameraZ-.14,group);
-    bezel.rotation.x=Math.PI/2;
-    const lens=mesh(new THREE.CylinderGeometry(.081,.098,.045,28),0x32536d,0,cameraY,cameraZ-.19,group);
-    lens.rotation.x=Math.PI/2;
-    lens.material.roughness=.09;
-    if(modelName==='DJI Mavic 3 Pro'){
-      for(const x of [-.115,.115])mesh(new THREE.SphereGeometry(.046,14,8),0x486781,x,cameraY+.065,cameraZ-.145,group);
-    }
-    for(const sign of [-1,1]){
-      if(cameraDrone)mesh(new THREE.SphereGeometry(.06,14,8),0x141a22,sign*bodyWidth*.65,.04,-.69,group);
-      for(const direction of [-1,1]){
-        const x=sign*armSpan,z=direction*armReach;
-        const rootX=sign*bodyWidth*.62,rootZ=direction*.32;
-        const arm=box(Math.hypot(x-rootX,z-rootZ),.135,guarded?.21:.17,racing?0x2c3036:config.paint,(x+rootX)/2,0,(z+rootZ)/2,group);
-        arm.rotation.y=-Math.atan2(z-rootZ,x-rootX);
-        mesh(new THREE.CylinderGeometry(.175,.155,.18,24),config.motorBoost?0xb88848:0x30343a,x,.09,z,group);
-        mesh(new THREE.CylinderGeometry(.068,.068,.03,18),0x93999c,x,.22,z,group);
-        const light=mesh(new THREE.SphereGeometry(.075,12,8),z<0?0xf85750:0x43f4a6,x,.03,z+.22,group);
-        light.material.emissive.copy(light.material.color);
-
-        const rotor=new THREE.Group();
-        rotor.position.set(x,.205,z);
-        group.add(rotor);
-        const blades=guarded||racing?3:2;
-        const bladeLength=neo?.28:guarded?.37:.46;
-        for(let i=0;i<blades;i++){
-          const angle=i*Math.PI*2/blades;
-          const blade=mesh(new THREE.SphereGeometry(1,12,8),0x22282e,Math.cos(angle)*bladeLength*.54,0,Math.sin(angle)*bladeLength*.54,rotor);
-          blade.scale.set(bladeLength*.56,.016,.05);
-          blade.rotation.y=-angle+.13;
-        }
-        if(!remote)rotors.push(rotor);
-        if(guarded){
-          const ductRadius=bladeLength+.065;
-          const duct=mesh(new THREE.CylinderGeometry(ductRadius,ductRadius,.13,36,1,true),avata?0x30363c:config.paint,x,.16,z,group);
-          duct.material.side=THREE.DoubleSide;
-          mesh(new THREE.TorusGeometry(ductRadius,.025,8,36),0x444b52,x,.23,z,group).rotation.x=-Math.PI/2;
-        }
-      }
-    }
+    buildDrone(config,{group,mesh,box,rotors,remote});
   }
   scene.add(group);
   return group;
@@ -355,6 +298,9 @@ function clearCourse(){
   el('course').setAttribute('aria-pressed','false');
 }
 function resetVehicle(){
+  hovering=false;
+  el('hover').setAttribute('aria-pressed','false');
+  el('hover').hidden=vehicle.kind!=='drone';
   vehicleRun++;
   keys.clear();
   yaw=0;
@@ -399,7 +345,7 @@ function choose(config){
   boostButton.setAttribute('aria-label',config.thrusters?'Forward boost':'Descend');
   el('vehicleName').textContent=config.name;
   el('controls').textContent=config.kind==='drone'
-    ? 'WASD move · ↑ take off or climb · ↓ descend or land · ←/→ turn · C change view'
+    ? 'WASD move · ↑ take off or climb · ↓ descend or land · ←/→ turn · Space hover · C change view'
     : config.thrusters
       ? 'W/S accelerate or reverse · A/D steer · Space lift thrusters · Shift forward boost · C change view'
       : 'W/S accelerate or reverse · A/D steer · Space brake · C change view';
@@ -484,6 +430,11 @@ addEventListener('keydown',event=>{
   if(!vehicle||event.ctrlKey||event.metaKey||event.altKey)return;
   const key=event.key.toLowerCase();
   if(key===' '&&event.target instanceof HTMLElement&&event.target.closest('button,a'))return;
+  if(key===' '&&vehicle.kind==='drone'){
+    event.preventDefault();
+    if(!event.repeat)toggleHover();
+    return;
+  }
   if(key==='c'&&!event.repeat){toggleCamera();return;}
   if(movement.includes(key)){
     event.preventDefault();
@@ -552,13 +503,13 @@ function tick(now){
         yaw-=turn;
         spinRemaining-=turn;
       }else{
-        yaw-=direction('arrowright','arrowleft')*dt*1.7;
+        if(!hovering)yaw-=direction('arrowright','arrowleft')*dt*1.7;
         stabilizedHeading=yaw;
       }
       if(landed){
         battery=Math.min(100,battery+dt*(vehicle.quickCharge?10:5));
         if(battery>=10)emergencyLanding=false;
-        if(!emergencyLanding&&keys.has('arrowup'))landed=false;
+        if(!emergencyLanding&&!hovering&&keys.has('arrowup'))landed=false;
       }else{
         const working=['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].some(key=>keys.has(key));
         const load=working?1:.6;
@@ -570,13 +521,14 @@ function tick(now){
       wish.multiplyScalar(vehicle.speed).applyAxisAngle(up,yaw);
       wish.y=direction('arrowup','arrowdown')*vehicle.climb;
       if(!landed)wish.addScaledVector(wind,(.35+position.y*.012)*(vehicle.windStabilizer?.55:1));
-      if(landed)wish.set(0,0,0);
+      if(landed||hovering)wish.set(0,0,0);
       else if(keys.has('arrowdown')&&!keys.has('arrowup')&&position.y<1.8){
         wish.x=wish.z=0;
         wish.y=-2;
       }
       if(emergencyLanding&&!landed)wish.set(0,-2,0);
       velocity.lerp(wish,easing);
+      if(hovering&&!emergencyLanding)velocity.set(0,0,0);
       model.rotation.x=spinRemaining>0?spinRemaining:THREE.MathUtils.lerp(model.rotation.x,landed?0:direction('w','s')*-.22,easing);
       model.rotation.z=THREE.MathUtils.lerp(model.rotation.z,landed?0:(direction('d','a')+direction('arrowright','arrowleft')*.55)*-.27,easing);
       rotors.forEach(rotor=>rotor.rotation.y+=dt*(landed?0:42));
@@ -641,7 +593,7 @@ function tick(now){
     const groundSpeed=Math.hypot(velocity.x,velocity.z);
     sound.update(vehicle,groundSpeed,velocity.y,wind.length(),keys.has('w')||keys.has('s'),Number(!!lift)+Number(!!boost),health>0&&(!drone||!landed&&!collisionFall),firstPerson);
     const kmh=Math.round(groundSpeed*3.6);
-    el('telemetry').textContent=kmh+' km/h'+(drone||vehicle.thrusters?' · Altitude '+position.y.toFixed(1)+' m'+(drone&&!health?(wreckLanded?' · Crashed':' · Falling'):landed?' · Landed':''):'');
+    el('telemetry').textContent=kmh+' km/h'+(drone||vehicle.thrusters?' · Altitude '+position.y.toFixed(1)+' m'+(drone&&!health?(wreckLanded?' · Crashed':' · Falling'):landed?' · Landed':hovering?' · Hover locked':''):'');
     if(raceStart!==null&&position.distanceTo(marker.position)<4){
       nextGate++;
       if(nextGate<routes[vehicle.kind].length)showGate();
@@ -682,7 +634,7 @@ async function syncPeers(){
   try{
     const response=await fetch('/api/simulator-presence',{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({id:playerId,run:sendingRun,grounded:landed,canCollide,vehicle:vehicle?.baseIndex??vehicles.indexOf(vehicle),x:position.x,y:position.y,z:position.z,yaw:Math.atan2(Math.sin(yaw),Math.cos(yaw))}),
+      body:JSON.stringify({id:playerId,run:sendingRun,grounded:landed,canCollide,custom:vehicle?.baseIndex!==undefined?{name:vehicle.name,bladeGuards:!!vehicle.bladeGuards,fpv:!!vehicle.fpv,reinforced:!!vehicle.reinforced,motorBoost:!!vehicle.motorBoost}:null,vx:velocity.x,vy:velocity.y,vz:velocity.z,vehicle:vehicle?.baseIndex??vehicles.indexOf(vehicle),x:position.x,y:position.y,z:position.z,yaw:Math.atan2(Math.sin(yaw),Math.cos(yaw))}),
       signal:AbortSignal.timeout(4500)
     });
     if(!response.ok)throw new Error('Connection unavailable');
@@ -693,42 +645,52 @@ async function syncPeers(){
       lastImpact=-Infinity;
       damage(30,now);
       collisionFall=true;
+      hovering=false;
+      el('hover').setAttribute('aria-pressed','false');
       keys.clear();
       velocity.y=Math.min(velocity.y,0);
       if(health)el('raceStatus').textContent='Drone collision · 30 damage';
     }
     const active=new Set();
     for(const player of players){
-      const config=vehicles[player.vehicle];
-      if(!config)continue;
+      const base=vehicles[player.vehicle];
+      if(!base)continue;
+      const signature=JSON.stringify([player.vehicle,player.custom??null]);
+      const config=player.custom?{...base,...player.custom}:base;
       active.add(player.id);
       let peer=peers.get(player.id);
-      if(peer&&peer.config!==config){removePeer(player.id,peer);peer=null;}
+      if(peer&&peer.signature!==signature){removePeer(player.id,peer);peer=null;}
       if(!peer){
         const label=document.createElement('span');
         label.className='peer-label';
         label.textContent=config.name;
         document.body.append(label);
-        peer={config,model:createModel(config,true),label,target:new THREE.Vector3()};
+        peer={signature,model:createModel(config,true),label,target:new THREE.Vector3(),velocity:new THREE.Vector3()};
         peer.model.position.set(player.x,player.y,player.z);
         peers.set(player.id,peer);
       }
       peer.target.set(player.x,player.y,player.z);
-      peer.model.rotation.y=player.yaw;
+      peer.velocity.set(player.vx??0,player.vy??0,player.vz??0);
+      peer.received=performance.now();
+      peer.yaw=player.yaw;
     }
     for(const [id,peer] of peers)if(!active.has(id))removePeer(id,peer);
     el('online').textContent=players.length+' other '+(players.length===1?'player':'players')+' online';
   }catch{
-    for(const [id,peer] of peers)removePeer(id,peer);
     el('online').textContent='Multiplayer unavailable';
   }finally{
-    setTimeout(syncPeers,1500);
+    setTimeout(syncPeers,250);
   }
 }
 const labelPosition=new THREE.Vector3();
+const predictedPosition=new THREE.Vector3();
 function updatePeers(dt){
   for(const peer of peers.values()){
-    peer.model.position.lerp(peer.target,1-Math.exp(-dt*7));
+    const age=Math.min((performance.now()-peer.received)/1000,.5);
+    predictedPosition.copy(peer.target).addScaledVector(peer.velocity,age);
+    peer.model.position.lerp(predictedPosition,1-Math.exp(-dt*12));
+    const yawDelta=Math.atan2(Math.sin(peer.yaw-peer.model.rotation.y),Math.cos(peer.yaw-peer.model.rotation.y));
+    peer.model.rotation.y+=yawDelta*(1-Math.exp(-dt*12));
     labelPosition.copy(peer.model.position);
     labelPosition.y+=2.1;
     labelPosition.project(camera);

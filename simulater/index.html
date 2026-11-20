@@ -22,7 +22,7 @@
  <label for="health">Health <progress id="health"></progress> <span id="healthValue"></span></label>
  <p id="batteryMeter" hidden><label for="battery">Battery <progress id="battery" max="100" value="100"></progress> <span id="batteryValue">100%</span></label></p>
  <p id="controls"></p>
- <div class="buttons"><button id="camera">View · Chase</button><button id="reset">Reset vehicle</button><button id="course" aria-pressed="false">Start course</button><button id="sound" aria-pressed="false">Sound: Off</button></div>
+ <div class="buttons"><button id="camera">View · Chase</button><button id="reset">Reset vehicle</button><button id="course" aria-pressed="false">Start course</button><button id="hover" hidden aria-pressed="false">Hover · Space</button><button id="sound" aria-pressed="false">Sound: Off</button></div>
  <p id="raceStatus" role="status"></p>
 </section>
 <div id="touch" hidden aria-label="Touch controls">
@@ -35,6 +35,6 @@
 <div id="workshopBench" hidden></div>
 <button id="closeWorkshop">Back to vehicles</button>
 </dialog>
-<script type="module" src="simulator.js?v=city-driving-focus"></script>
+<script type="module" src="simulator.js?v=hover-multiplayer"></script>
 </body>
 </html>
