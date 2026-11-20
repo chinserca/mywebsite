@@ -52,6 +52,7 @@ export function buildDrone(config,{group,mesh,box,rotors,remote}){
    if(!guarded&&direction<0)box(.06,.28,.06,color,x,-.16,z,group);
    const rotor=new THREE.Group();
    rotor.position.set(x,.15,z);
+   rotor.userData.propeller=true;
    group.add(rotor);
    const bladeCount=design.frame||guarded?3:2;
    for(let i=0;i<bladeCount;i++){

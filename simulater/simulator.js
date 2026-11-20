@@ -514,7 +514,11 @@ function tick(now){
         const working=['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].some(key=>keys.has(key));
         const load=working?1:.6;
         battery=Math.max(0,battery-dt*100*load/vehicle.batterySeconds);
-        if(battery===0)emergencyLanding=true;
+        if(battery===0){
+          emergencyLanding=true;
+          hovering=false;
+          el('hover').setAttribute('aria-pressed','false');
+        }
       }
       wish.set(direction('d','a'),0,-direction('w','s'));
       if(wish.lengthSq()>1)wish.normalize();
@@ -665,7 +669,8 @@ async function syncPeers(){
         label.className='peer-label';
         label.textContent=config.name;
         document.body.append(label);
-        peer={signature,model:createModel(config,true),label,target:new THREE.Vector3(),velocity:new THREE.Vector3()};
+        peer={signature,model:createModel(config,true),label,target:new THREE.Vector3(),velocity:new THREE.Vector3(),rotors:[]};
+        peer.model.traverse(part=>{if(part.userData.propeller)peer.rotors.push(part);});
         peer.model.position.set(player.x,player.y,player.z);
         peers.set(player.id,peer);
       }
@@ -673,6 +678,7 @@ async function syncPeers(){
       peer.velocity.set(player.vx??0,player.vy??0,player.vz??0);
       peer.received=performance.now();
       peer.yaw=player.yaw;
+      peer.grounded=player.grounded??player.y<=landingHeight+.1;
     }
     for(const [id,peer] of peers)if(!active.has(id))removePeer(id,peer);
     el('online').textContent=players.length+' other '+(players.length===1?'player':'players')+' online';
@@ -685,7 +691,9 @@ async function syncPeers(){
 const labelPosition=new THREE.Vector3();
 const predictedPosition=new THREE.Vector3();
 function updatePeers(dt){
-  for(const peer of peers.values()){
+  for(const [id,peer] of peers){
+    if(performance.now()-peer.received>18000){removePeer(id,peer);continue;}
+    for(const rotor of peer.rotors)rotor.rotation.y+=peer.grounded?0:dt*42;
     const age=Math.min((performance.now()-peer.received)/1000,.5);
     predictedPosition.copy(peer.target).addScaledVector(peer.velocity,age);
     peer.model.position.lerp(predictedPosition,1-Math.exp(-dt*12));

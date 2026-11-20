@@ -49,7 +49,7 @@ module.exports=async function handler(req,res){
   if(slot===-1&&vehicle>=0)return res.status(503).json({error:'World is full'});
   if(slot>=0)await cache.set(slots[slot],player,{ttl:vehicle>=0?lifetime:1});
   const peers=active.filter(value=>value&&value.id!==id&&value.vehicle>=0)
-   .map(({id,x,y,z,yaw,vehicle,custom,vx,vy,vz})=>({id,x,y,z,yaw,vehicle,custom,vx,vy,vz}));
+   .map(({id,x,y,z,yaw,vehicle,custom,vx,vy,vz,grounded})=>({id,x,y,z,yaw,vehicle,custom,vx,vy,vz,grounded}));
   let collision=false;
   if(vehicle>=0&&!cars.has(vehicle)&&input.canCollide===true){
    collision=Boolean(await cache.get(collisionKey(player)));
