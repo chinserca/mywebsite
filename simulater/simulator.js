@@ -210,6 +210,7 @@ const up=new THREE.Vector3(0,1,0);
 
 function createModel(config,remote=false){
   const group=new THREE.Group();
+  group.rotation.order='YXZ';
   if(!remote){rotors=[];wheels=[];liftFlames=[];boostFlames=[];}
   if(config.kind==='car'){
     const roadster=config.name==='Tesla Roadster';
@@ -533,8 +534,8 @@ function tick(now){
       if(emergencyLanding&&!landed)wish.set(0,-2,0);
       velocity.lerp(wish,easing);
       if(hovering&&!emergencyLanding)velocity.set(0,0,0);
-      model.rotation.x=spinRemaining>0?spinRemaining:THREE.MathUtils.lerp(model.rotation.x,landed?0:direction('w','s')*-.22,easing);
-      model.rotation.z=THREE.MathUtils.lerp(model.rotation.z,landed?0:(direction('d','a')+direction('arrowright','arrowleft')*.55)*-.27,easing);
+      model.rotation.x=spinRemaining>0?spinRemaining:THREE.MathUtils.lerp(model.rotation.x,landed||hovering?0:direction('w','s')*-.22,easing);
+      model.rotation.z=THREE.MathUtils.lerp(model.rotation.z,landed||hovering?0:(direction('d','a')+direction('arrowright','arrowleft')*.55)*-.27,easing);
       rotors.forEach(rotor=>rotor.rotation.y+=dt*(landed?0:42));
     }else{
       const throttle=direction('w','s');
