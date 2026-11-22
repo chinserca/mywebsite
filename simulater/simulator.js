@@ -237,6 +237,12 @@ let hovering=false;
 function toggleHover(){
   if(vehicle?.kind!=='drone'||!health||collisionFall||emergencyLanding)return;
   hovering=!hovering;
+  if(hovering){
+    spinRemaining=0;
+    model.rotation.x=0;
+    model.rotation.z=0;
+    stabilizedHeading=yaw;
+  }
   velocity.set(0,0,0);
   keys.clear();
   el('hover').setAttribute('aria-pressed',String(hovering));
