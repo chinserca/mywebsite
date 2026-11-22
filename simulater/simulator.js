@@ -24,7 +24,7 @@ const vehicles = [
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xa9d7f1);
-scene.fog = new THREE.FogExp2(0xa9d7f1,.004);
+scene.fog = new THREE.FogExp2(0xb9c9d2,.0025);
 const camera = new THREE.PerspectiveCamera(62,innerWidth/innerHeight,.1,450);
 let renderer;
 try {
@@ -38,10 +38,10 @@ renderer.setSize(innerWidth,innerHeight);
 renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure=1.2;
+renderer.toneMappingExposure=1.15;
 el('world').append(renderer.domElement);
-scene.add(new THREE.HemisphereLight(0xe8f7ff,0x779266,2.1));
-const sun = new THREE.DirectionalLight(0xffe1a4,2.25);
+scene.add(new THREE.HemisphereLight(0xd8e6f4,0x93908b,2.1));
+const sun = new THREE.DirectionalLight(0xffebd2,2.7);
 sun.position.set(38,65,28);
 sun.castShadow=true;
 sun.shadow.mapSize.set(2048,2048);
@@ -71,6 +71,26 @@ const streetZs=[-317,-254,-191,-128,-65,-2,61,124,187,250,313];
 
 const asphalt=material(0x343c46);
 const concrete=material(0xaeb4b8);
+function surfaceTexture(base,spread){
+  const canvas=document.createElement('canvas');
+  canvas.width=canvas.height=128;
+  const ink=canvas.getContext('2d');
+  const pixels=ink.createImageData(128,128);
+  for(let i=0;i<pixels.data.length;i+=4){
+    const value=base+((i*31+(i%127)*73)%spread)-spread/2;
+    pixels.data.set([value,value,value,255],i);
+  }
+  ink.putImageData(pixels,0,0);
+  const texture=new THREE.CanvasTexture(canvas);
+  texture.wrapS=texture.wrapT=THREE.RepeatWrapping;
+  texture.repeat.set(4,80);
+  texture.colorSpace=THREE.SRGBColorSpace;
+  texture.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());
+  return texture;
+}
+asphalt.map=surfaceTexture(175,40);
+concrete.map=surfaceTexture(235,16);
+concrete.map.repeat.set(12,12);
 const lineMaterial=material(0xf2e7c4);
 const laneMarks=[];
 for(const x of avenueXs){
@@ -122,6 +142,7 @@ const facadeColors=[0xc3d7dd,0xdbc8b0,0x9baab1,0xd3d7d6];
 const facades=facadeColors.map(color=>{
   const side=material(color);
   side.map=facade;
+  side.roughness=.48;
   const roof=material(0x656c72);
   return [side,side,roof,roof,side,side];
 });
@@ -142,10 +163,26 @@ for(let column=0;column<avenueXs.length-1;column++){
       const height=7+Math.round(center*(tower?43:24))+(column*13+row*7+offset+12)%12;
       const width=16+(column+row)%4;
       const depth=19+(column*3+row)%7;
-      const building=new THREE.Mesh(new THREE.BoxGeometry(width,height,depth),facades[(column+row+(offset>0?1:0))%facades.length]);
+      const buildingMaterials=facades[(column+row+(offset>0?1:0))%facades.length];
+      const side=buildingMaterials[0].clone();
+      side.map=facade.clone();
+      side.map.wrapS=side.map.wrapT=THREE.RepeatWrapping;
+      side.map.repeat.set(Math.max(1,width/15),Math.max(.5,height/25));
+      const building=new THREE.Mesh(new THREE.BoxGeometry(width,height,depth),[side,side,buildingMaterials[2],buildingMaterials[3],side,side]);
       building.position.set(x+offset,height/2,z+(offset>0?9:-9));
       building.castShadow=building.receiveShadow=true;
       scene.add(building);
+      if(Math.abs(x)<90&&Math.abs(z)<140){
+        const front=building.position.z+depth/2+.04;
+        box(2.6,2.5,.08,0x243c48,building.position.x,1.3,front);
+        box(3.5,.14,1.1,0x646d70,building.position.x,2.7,front+.35);
+        box(width,.22,depth,0x727a7f,building.position.x,height+.1,building.position.z);
+        const roofUnit=box(2.2,1,1.6,0x959e9f,building.position.x+width*.24,height+.5,building.position.z);
+        roofUnit.material.metalness=.35;
+        const unitBounds={x:roofUnit.position.x,z:roofUnit.position.z,width:1.1,depth:.8,height:height+1};
+        obstacles.push(unitBounds);
+        roofs.push(unitBounds);
+      }
       if(tower){
         box(width*.56,2,depth*.55,0x58656c,building.position.x,height+1,building.position.z);
         const roofCap={x:building.position.x,z:building.position.z,width:width*.28,depth:depth*.275,height:height+2};
@@ -170,6 +207,14 @@ for(const [x,z] of [[-42,18],[-12,18],[-42,40],[-12,40],[-35,46],[-18,46],[-42,-
   obstacles.push({x,z,radius:2.35,height:7.4});
 }
 for(const [x,z] of [[0,-65],[54,-65],[0,-2],[54,-2]]){
+  for(const sign of [-1,1]){
+    const poleX=x+sign*7.2,poleZ=z+sign*7.2;
+    mesh(new THREE.CylinderGeometry(.085,.12,6.5,12),0x56606a,poleX,3.25,poleZ);
+    box(3.1,.1,.1,0x56606a,poleX-sign*1.5,6.5,poleZ);
+    const lamp=box(.65,.08,.32,0xfff0c9,poleX-sign*2.6,6.45,poleZ);
+    lamp.material.emissive.setHex(0x544a32);
+    obstacles.push({x:poleX,z:poleZ,radius:.12,height:6.5});
+  }
   for(let stripe=-4;stripe<=4;stripe+=2){
     box(.9,.015,2.4,0xf4f1dc,x+stripe,.05,z+6.5);
     box(2.4,.015,.9,0xf4f1dc,x+6.5,.05,z+stripe);
@@ -228,8 +273,25 @@ function createModel(config,remote=false){
     shell.rotation.y=-Math.PI/2;
     shell.material.roughness=.28;
     shell.material.metalness=.25;
-    const glass=box(1.59,roadster?.35:.57,1.46,0x263e55,0,roadster?.98:1.14,.23,group);
-    glass.material.roughness=.16;
+    const roofProfile=new THREE.Shape();
+    roofProfile.moveTo(-.85,0);
+    roofProfile.lineTo(.86,0);
+    roofProfile.lineTo(.43,roadster?.42:.65);
+    roofProfile.lineTo(-.38,roadster?.42:.65);
+    roofProfile.closePath();
+    const glass=mesh(new THREE.ExtrudeGeometry(roofProfile,{depth:1.5,bevelEnabled:false}),0x243443,.75,.78,.16,group);
+    glass.rotation.y=-Math.PI/2;
+    glass.material.roughness=.13;
+    glass.material.metalness=.55;
+    box(1.45,.045,.76,roadster?0x252b30:config.paint,0,roadster?1.21:1.44,.14,group);
+    box(1.35,.14,.1,0x17222a,0,.3,-2.46,group);
+    box(1.7,.09,.12,0x252a2d,0,.27,2.46,group);
+    for(const sign of [-1,1]){
+      box(.03,.025,1.35,0x3e464c,sign*.99,.66,.25,group);
+      box(.04,.035,.23,0x74797c,sign*1.01,.76,.52,group);
+      const headlight=box(.47,.07,.04,0xd5e7ec,sign*.68,.62,-2.46,group);
+      headlight.material.emissive.setHex(0x4b565a);
+    }
     for(const x of [-.78,.78]){
       box(.46,.09,.09,0xe5f7ff,x,.52,-2.44,group);
       box(.49,.09,.09,0xff3437,x,.55,2.42,group);
