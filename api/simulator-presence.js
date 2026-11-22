@@ -34,7 +34,9 @@ module.exports=async function handler(req,res){
  const {id,x,y,z,yaw,vehicle}=input;
  const run=Number.isSafeInteger(input.run)&&input.run>=0?input.run:0;
  const grounded=typeof input.grounded==='boolean'?input.grounded:y<=.65;
- const player={id,x,y,z,yaw,vehicle,run,grounded,custom:cars.has(vehicle)?null:customDrone(input.custom),vx:speedComponent(input.vx),vy:speedComponent(input.vy),vz:speedComponent(input.vz),canCollide:input.canCollide===true,seen:Date.now()};
+ const pitch=Number.isFinite(input.pitch)?Math.atan2(Math.sin(input.pitch),Math.cos(input.pitch)):0;
+ const roll=Number.isFinite(input.roll)?Math.atan2(Math.sin(input.roll),Math.cos(input.roll)):0;
+ const player={id,x,y,z,yaw,pitch,roll,vehicle,run,grounded,custom:cars.has(vehicle)?null:customDrone(input.custom),vx:speedComponent(input.vx),vy:speedComponent(input.vy),vz:speedComponent(input.vz),canCollide:input.canCollide===true,seen:Date.now()};
  try{
   const active=(await Promise.all(slots.map(key=>cache.get(key))))
    .map(value=>validPosition(value)&&Number.isFinite(value.seen)&&player.seen-value.seen<lifetime*1000&&value.vehicle>=0?value:null);
@@ -49,7 +51,7 @@ module.exports=async function handler(req,res){
   if(slot===-1&&vehicle>=0)return res.status(503).json({error:'World is full'});
   if(slot>=0)await cache.set(slots[slot],player,{ttl:vehicle>=0?lifetime:1});
   const peers=active.filter(value=>value&&value.id!==id&&value.vehicle>=0)
-   .map(({id,x,y,z,yaw,vehicle,custom,vx,vy,vz,grounded})=>({id,x,y,z,yaw,vehicle,custom,vx,vy,vz,grounded}));
+   .map(({id,x,y,z,yaw,pitch,roll,vehicle,custom,vx,vy,vz,grounded})=>({id,x,y,z,yaw,pitch,roll,vehicle,custom,vx,vy,vz,grounded}));
   let collision=false;
   if(vehicle>=0&&!cars.has(vehicle)&&input.canCollide===true){
    collision=Boolean(await cache.get(collisionKey(player)));

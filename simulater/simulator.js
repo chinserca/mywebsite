@@ -639,7 +639,7 @@ async function syncPeers(){
   try{
     const response=await fetch('/api/simulator-presence',{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({id:playerId,run:sendingRun,grounded:landed,canCollide,custom:vehicle?.baseIndex!==undefined?{name:vehicle.name,bladeGuards:!!vehicle.bladeGuards,fpv:!!vehicle.fpv,reinforced:!!vehicle.reinforced,motorBoost:!!vehicle.motorBoost}:null,vx:velocity.x,vy:velocity.y,vz:velocity.z,vehicle:vehicle?.baseIndex??vehicles.indexOf(vehicle),x:position.x,y:position.y,z:position.z,yaw:Math.atan2(Math.sin(yaw),Math.cos(yaw))}),
+      body:JSON.stringify({id:playerId,run:sendingRun,grounded:landed,pitch:model?.rotation.x??0,roll:model?.rotation.z??0,canCollide,custom:vehicle?.baseIndex!==undefined?{name:vehicle.name,bladeGuards:!!vehicle.bladeGuards,fpv:!!vehicle.fpv,reinforced:!!vehicle.reinforced,motorBoost:!!vehicle.motorBoost}:null,vx:velocity.x,vy:velocity.y,vz:velocity.z,vehicle:vehicle?.baseIndex??vehicles.indexOf(vehicle),x:position.x,y:position.y,z:position.z,yaw:Math.atan2(Math.sin(yaw),Math.cos(yaw))}),
       signal:AbortSignal.timeout(4500)
     });
     if(!response.ok)throw new Error('Connection unavailable');
@@ -679,6 +679,8 @@ async function syncPeers(){
       peer.velocity.set(player.vx??0,player.vy??0,player.vz??0);
       peer.received=performance.now();
       peer.yaw=player.yaw;
+      peer.pitch=player.pitch??0;
+      peer.roll=player.roll??0;
       peer.grounded=player.grounded??player.y<=landingHeight+.1;
     }
     for(const [id,peer] of peers)if(!active.has(id))removePeer(id,peer);
@@ -700,6 +702,10 @@ function updatePeers(dt){
     peer.model.position.lerp(predictedPosition,1-Math.exp(-dt*12));
     const yawDelta=Math.atan2(Math.sin(peer.yaw-peer.model.rotation.y),Math.cos(peer.yaw-peer.model.rotation.y));
     peer.model.rotation.y+=yawDelta*(1-Math.exp(-dt*12));
+    for(const [axis,target] of [['x',peer.pitch],['z',peer.roll]]){
+      const delta=Math.atan2(Math.sin(target-peer.model.rotation[axis]),Math.cos(target-peer.model.rotation[axis]));
+      peer.model.rotation[axis]+=delta*(1-Math.exp(-dt*12));
+    }
     labelPosition.copy(peer.model.position);
     labelPosition.y+=2.1;
     labelPosition.project(camera);
