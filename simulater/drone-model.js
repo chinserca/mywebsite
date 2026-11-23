@@ -118,4 +118,7 @@ export function buildDrone(config,{group,mesh,box,rotors,remote}){
   box(.76,.04,.1,0x333d43,0,-.47,.12,group);
  }
  if(config.reinforced)box(width*2.12,.06,length*1.25,0x505a63,0,-height,.1,group);
+ if(design.gear){
+  for(const part of group.children)part.position.y+=.3;
+ }
 }

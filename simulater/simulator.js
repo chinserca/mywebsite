@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import {setupWorkshop} from './workshop.js?v=flight-parts';
 import {setupSound} from './sound.js';
-import {buildDrone} from './drone-model.js';
+import {buildDrone} from './drone-model.js?v=landing-gear';
 
 const el = id => document.getElementById(id);
 const sound=setupSound(el('sound'));
