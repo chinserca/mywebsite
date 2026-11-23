@@ -17,7 +17,7 @@ const designs={
 };
 
 export function buildDrone(config,{group,mesh,box,rotors,remote}){
- const name=config.name.replace(/ Custom$/,'');
+ const name=config.modelName??config.name.replace(/ Custom$/,'');
  const design=designs[name]??designs['DJI Mini 4K'];
  const [width,height,length]=design.body;
  const color=name==='Workshop Drone'?config.paint:design.color;

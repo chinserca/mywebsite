@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import {setupWorkshop} from './workshop.js?v=flight-parts';
+import {setupWorkshop} from './workshop.js?v=base-identity';
 import {setupSound} from './sound.js';
-import {buildDrone} from './drone-model.js?v=landing-gear';
+import {buildDrone} from './drone-model.js?v=base-identity';
 
 const el = id => document.getElementById(id);
 const sound=setupSound(el('sound'));
@@ -729,7 +729,7 @@ async function syncPeers(){
       const base=vehicles[player.vehicle];
       if(!base)continue;
       const signature=JSON.stringify([player.vehicle,player.custom??null]);
-      const config=player.custom?{...base,...player.custom}:base;
+      const config=player.custom?{...base,modelName:base.name,...player.custom}:base;
       active.add(player.id);
       let peer=peers.get(player.id);
       if(peer&&peer.signature!==signature){removePeer(player.id,peer);peer=null;}

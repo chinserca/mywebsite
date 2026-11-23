@@ -109,7 +109,7 @@ export function setupWorkshop(vehicles,launch){
   fly.onclick=()=>{
    const blank=!modify&&base.selectedIndex===0;
    const original=originalDrone();
-   const config={...original,baseIndex:vehicles.indexOf(original),name:modify?original.name+' Custom':'Workshop Drone'};
+   const config={...original,modelName:original.name,baseIndex:vehicles.indexOf(original),name:modify?original.name+' Custom':'Workshop Drone'};
    config.batterySeconds=ratedSeconds(battery.selectedIndex);
    if(blank)Object.assign(config,{paint:0x32b8a5,health:85,speed:18,climb:9});
    for(const index of installed)Object.assign(config,upgrades[index].apply);
