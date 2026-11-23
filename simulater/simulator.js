@@ -711,7 +711,7 @@ async function syncPeers(){
   try{
     const response=await fetch('/api/simulator-presence',{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({id:playerId,run:sendingRun,grounded:landed,pitch:model?.rotation.x??0,roll:model?.rotation.z??0,canCollide,custom:vehicle?.baseIndex!==undefined?{name:vehicle.name,bladeGuards:!!vehicle.bladeGuards,fpv:!!vehicle.fpv,reinforced:!!vehicle.reinforced,motorBoost:!!vehicle.motorBoost}:null,vx:velocity.x,vy:velocity.y,vz:velocity.z,vehicle:vehicle?.baseIndex??vehicles.indexOf(vehicle),x:position.x,y:position.y,z:position.z,yaw:Math.atan2(Math.sin(yaw),Math.cos(yaw))}),
+      body:JSON.stringify({id:playerId,run:sendingRun,grounded:landed,pitch:model?.rotation.x??0,roll:model?.rotation.z??0,canCollide,custom:vehicle?.baseIndex!==undefined?{name:vehicle.name,paint:vehicle.paint,bladeGuards:!!vehicle.bladeGuards,fpv:!!vehicle.fpv,reinforced:!!vehicle.reinforced,motorBoost:!!vehicle.motorBoost}:null,vx:velocity.x,vy:velocity.y,vz:velocity.z,vehicle:vehicle?.baseIndex??vehicles.indexOf(vehicle),x:position.x,y:position.y,z:position.z,yaw:Math.atan2(Math.sin(yaw),Math.cos(yaw))}),
       signal:AbortSignal.timeout(4500)
     });
     if(!response.ok)throw new Error('Connection unavailable');

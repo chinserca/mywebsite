@@ -10,6 +10,7 @@ function customDrone(value){
  if(!value||typeof value.name!=='string')return null;
  const name=value.name.slice(0,60);
  const result={name};
+ if(Number.isInteger(value.paint)&&value.paint>=0&&value.paint<=0xffffff)result.paint=value.paint;
  for(const key of ['bladeGuards','fpv','reinforced','motorBoost'])result[key]=value[key]===true;
  return result;
 }
