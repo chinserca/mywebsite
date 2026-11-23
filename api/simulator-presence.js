@@ -49,7 +49,10 @@ module.exports=async function handler(req,res){
    }
   }
   if(slot===-1&&vehicle>=0)return res.status(503).json({error:'World is full'});
-  if(slot>=0)await cache.set(slots[slot],player,{ttl:vehicle>=0?lifetime:1});
+  const previous=active[slot];
+  const unchanged=previous&&Object.keys(player).every(key=>key==='seen'||JSON.stringify(player[key])===JSON.stringify(previous[key]));
+  const heartbeatDue=!previous||player.seen-previous.seen>=8000;
+  if(slot>=0&&(!unchanged||heartbeatDue))await cache.set(slots[slot],player,{ttl:vehicle>=0?lifetime:1});
   const peers=active.filter(value=>value&&value.id!==id&&value.vehicle>=0)
    .map(({id,x,y,z,yaw,pitch,roll,vehicle,custom,vx,vy,vz,grounded})=>({id,x,y,z,yaw,pitch,roll,vehicle,custom,vx,vy,vz,grounded}));
   let collision=false;
