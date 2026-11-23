@@ -702,6 +702,10 @@ function removePeer(id,peer){
   peers.delete(id);
 }
 async function syncPeers(){
+  if(document.hidden){
+    setTimeout(syncPeers,1000);
+    return;
+  }
   const sendingRun=vehicleRun;
   const canCollide=vehicle?.kind==='drone'&&health>0&&!collisionFall&&performance.now()-lastDroneCrash>6500;
   try{

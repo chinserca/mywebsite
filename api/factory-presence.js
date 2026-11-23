@@ -37,7 +37,9 @@ module.exports=async function handler(req,res){
    }
   }
   if(slot===-1)return res.status(503).json({error:'World is full'});
-  await cache.set(slots[slot],player,{ttl:lifetime});
+  const previous=active[slot];
+  const unchanged=previous&&Object.keys(player).every(key=>key==='seen'||player[key]===previous[key]);
+  if(!unchanged||player.seen-previous.seen>=8000)await cache.set(slots[slot],player,{ttl:lifetime});
   const peers=active.filter(value=>value&&value.id!==id&&value.zone===zone)
    .map(({id,x,z,yaw,zone,skin,username})=>({id,x,z,yaw,zone,skin,username}));
   return res.status(200).json({peers});
