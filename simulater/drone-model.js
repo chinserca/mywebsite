@@ -20,7 +20,7 @@ export function buildDrone(config,{group,mesh,box,rotors,remote}){
  const name=config.modelName??config.name.replace(/ Custom$/,'');
  const design=designs[name]??designs['DJI Mini 4K'];
  const [width,height,length]=design.body;
- const color=name==='Workshop Drone'?config.paint:design.color;
+ const color=config.name==='Workshop Drone'?config.paint:design.color;
  const guarded=!!config.bladeGuards;
  const shell=mesh(new THREE.SphereGeometry(1,36,22),color,0,0,0,group);
  shell.scale.set(width,height,length);
