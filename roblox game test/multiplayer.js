@@ -52,9 +52,11 @@ export function connectWorld({THREE,scene,label,status,readPosition,labX,orbitLi
   Object.assign(peer,{x,z,yaw,zone,seen:performance.now()});
  }
  async function sync(local){
+  if(!navigator.onLine){status.textContent='Offline · solo play';return;}
   pending=true;
   try{
-   const response=await fetch('/api/factory-presence',{
+   const apiOrigin=location.protocol==='file:'?'https://mywebsite-one-beta-41.vercel.app':'';
+   const response=await fetch(apiOrigin+'/api/factory-presence',{
     method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({id:playerId,...local}),signal:AbortSignal.timeout(5000)
    });
@@ -88,7 +90,7 @@ export function connectWorld({THREE,scene,label,status,readPosition,labX,orbitLi
    peer.avatar.rotation.y=peer.yaw;
    peer.sign.position.set(peer.avatar.position.x,2.95,peer.avatar.position.z);
   }
-  const text=online?'Online · '+(nearby+1)+' in this area':attempted?'Solo · Connection unavailable':'Solo · Connecting…';
+  const text=!navigator.onLine?'Offline · solo play':online?'Online · '+(nearby+1)+' in this area':attempted?'Solo · Connection unavailable':'Solo · Connecting…';
   if(status.textContent!==text)status.textContent=text;
   if(pending||document.hidden)return;
   const changed=!lastPosition||local.zone!==lastPosition.zone||Math.hypot(local.x-lastPosition.x,local.z-lastPosition.z)>.12||Math.abs(local.yaw-lastPosition.yaw)>.1;

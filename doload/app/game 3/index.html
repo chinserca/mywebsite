@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hamster Playground</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="title-row">
+        <h1>Hamster Playground</h1>
+        <div class="header-tools">
+          <a class="leave-btn" href="../index.html">Leave</a>
+          <button type="button" class="icon-btn" id="muteBtn" aria-label="Mute sounds">🔊</button>
+          <div class="stat-chip" aria-label="Seeds">
+            <span>Seeds</span>
+            <strong id="seedValue">10</strong>
+          </div>
+          <div class="stat-chip" aria-label="Hamsters">
+            <span>Hamsters</span>
+            <strong id="hamsterValue">1</strong>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="stage">
+      <canvas id="game" width="960" height="540" aria-label="Hamster playground"></canvas>
+
+      <div class="overlay" id="titleScreen">
+        <img class="cover" src="assets/cover.svg" alt="Cute hamster in a playground" />
+        <h2>Hamster Playground</h2>
+        <p>Feed hungry hamsters to earn seeds, then build them a dream park.</p>
+        <ul class="how">
+          <li>Pick a snack, then click a hamster to feed it</li>
+          <li>Spend seeds on toys in the shop</li>
+          <li>Click the park to place each toy</li>
+        </ul>
+        <div class="title-actions">
+          <button type="button" class="btn play" id="playBtn">Play</button>
+          <button type="button" class="btn ghost is-hidden" id="newParkBtn">New park</button>
+        </div>
+      </div>
+
+      <div class="overlay is-hidden" id="pauseScreen">
+        <h2>Paused</h2>
+        <p>The hamsters are taking a tiny nap.</p>
+        <button type="button" class="btn play" id="resumeBtn">Resume</button>
+      </div>
+
+      <div class="toast is-hidden" id="toast" role="status"></div>
+    </div>
+
+    <section class="food-tray" aria-label="Food">
+      <h2>Snacks</h2>
+      <div class="food-row" id="foodRow"></div>
+    </section>
+
+    <section class="shop" aria-label="Playground shop">
+      <h2>Playground shop</h2>
+      <p class="shop-note" id="shopNote">Feed hamsters to earn seeds, then click a toy to place it.</p>
+      <div class="shop-grid" id="shopGrid"></div>
+    </section>
+
+    <p class="hint" id="hintText">Pick a snack and click a hamster · Esc to pause</p>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>

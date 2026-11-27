@@ -1,0 +1,15 @@
+{
+ "id":"/doload/ac-website",
+ "name":"AC Website",
+ "short_name":"AC",
+ "description":"AC games and website pages, available offline.",
+ "start_url":"/doload/app/index.html",
+ "scope":"/doload/",
+ "display":"standalone",
+ "background_color":"#f3f5f1",
+ "theme_color":"#183e32",
+ "icons":[
+  {"src":"/doload/icon-192.png","sizes":"192x192","type":"image/png"},
+  {"src":"/doload/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any"}
+ ]
+}

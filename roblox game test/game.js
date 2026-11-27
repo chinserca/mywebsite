@@ -1,6 +1,6 @@
 import {setupGenetics} from './genetics.js?v=fieldwork';
 import {setupGameAudio} from './audio.js';
-import {connectWorld} from './multiplayer.js?v=orbital';
+import {connectWorld} from './multiplayer.js?v=offline';
 import * as THREE from 'three';
 import {buildAdventureWorld, LAB_X, EARTH_BOUNDS, surveySites, blueprintRoller, stationRelays, cargoLaunch, cargoDestinations, stationBounds, orbitLimit, stationHangar, recorderSites, recorderTerminal, telescopeSites} from './world.js?v=rare-crystals';
 import {setupMouseLock} from './mouse-lock.js';

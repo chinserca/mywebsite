@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+  <defs><linearGradient id="sky" x2="0" y2="1"><stop stop-color="#142437"/><stop offset="1" stop-color="#416477"/></linearGradient></defs>
+  <rect width="500" height="500" rx="30" fill="url(#sky)"/>
+  <circle cx="404" cy="80" r="36" fill="#cbdcda"/>
+  <g fill="#90a6ac" opacity=".4"><ellipse cx="165" cy="99" rx="35" ry="23"/><ellipse cx="190" cy="67" rx="46" ry="26"/><ellipse cx="232" cy="35" rx="56" ry="25"/></g>
+  <path d="M145 250V125h36v125M309 250V155h36v95" fill="#263846" stroke="#71909c" stroke-width="6"/>
+  <path d="M65 332V235l108 38v-65l108 50v-55l150 68v111H65Z" fill="#526d7c" stroke="#96abb1" stroke-width="6" stroke-linejoin="round"/>
+  <g fill="#ffcd70"><path d="M93 292h39v42H93zM157 292h39v42h-39zM221 292h39v42h-39zM285 292h39v42h-39zM349 292h39v42h-39z"/></g>
+  <path d="M55 378h390" stroke="#ffcb65" stroke-width="9"/>
+  <text x="250" y="439" text-anchor="middle" fill="#fff" font-family="Arial,sans-serif" font-size="41" font-weight="bold" letter-spacing="2">THE FACTORY</text>
+</svg>

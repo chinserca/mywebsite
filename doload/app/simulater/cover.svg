@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320">
+ <defs><linearGradient id="sky" x2="0" y2="1"><stop stop-color="#13334f"/><stop offset="1" stop-color="#629fb6"/></linearGradient></defs>
+ <path fill="url(#sky)" d="M0 0h320v320H0z"/>
+ <circle cx="252" cy="68" r="33" fill="#ffd681"/>
+ <path fill="#385c6c" d="M0 155l73-59 40 29 49-45 55 59 36-26 67 40v57H0z"/>
+ <path fill="#446c58" d="M0 167l100-23 76 27 144-14v163H0z"/>
+ <path fill="#243747" d="M131 160h49l114 160H19z"/>
+ <path d="M156 169v18m0 15v22m0 18v31m0 18v29" stroke="#ffdb8c" stroke-width="4"/>
+ <g transform="translate(67 62)" stroke-linecap="round">
+  <path d="M38 39l53 20 53-20m-106 64l53-44 53 44" stroke="#142839" stroke-width="9"/>
+  <g fill="#c7e9f0" stroke="#34485d" stroke-width="4">
+   <ellipse cx="38" cy="39" rx="22" ry="9"/><ellipse cx="144" cy="39" rx="22" ry="9"/>
+   <ellipse cx="38" cy="103" rx="22" ry="9"/><ellipse cx="144" cy="103" rx="22" ry="9"/>
+  </g>
+  <path d="M66 51h50l12 25-20 15H74L54 76z" fill="#abc5d6" stroke="#263e52" stroke-width="4"/>
+  <circle cx="91" cy="80" r="9" fill="#12283b" stroke="#68f0d4" stroke-width="3"/>
+ </g>
+ <g transform="translate(100 215)">
+  <path d="M7 43l5-19 18-6L44 4h43l18 16 13 7 4 16v12H7z" fill="#ef544b" stroke="#8d292e" stroke-width="4"/>
+  <path d="M38 19L49 9h34l13 11z" fill="#18364c"/>
+  <path d="M12 34h19m69 0h16" stroke="#fff5bc" stroke-width="5"/>
+  <circle cx="30" cy="53" r="11" fill="#172737"/><circle cx="98" cy="53" r="11" fill="#172737"/>
+ </g>
+ <rect x="43" y="13" width="234" height="37" rx="9" fill="#122b40"/>
+ <text x="160" y="37" fill="#f5fbff" font-family="system-ui,sans-serif" font-weight="800" font-size="17" letter-spacing="1" text-anchor="middle">AIR &amp; ROAD SIMULATOR</text>
+</svg>

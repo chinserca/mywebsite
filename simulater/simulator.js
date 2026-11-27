@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import {setupWorkshop} from './workshop.js?v=base-identity';
 import {setupSound} from './sound.js';
 import {buildDrone} from './drone-model.js?v=base-identity';
+import {isNewerSnapshot,receiveSnapshot,sampleMotion} from './peer-motion.js';
 
 const el = id => document.getElementById(id);
 const sound=setupSound(el('sound'));
@@ -694,6 +695,7 @@ requestAnimationFrame(tick);
 
 const playerId=crypto.randomUUID();
 const peers=new Map();
+let presenceSequence=0;
 
 function removePeer(id,peer){
   scene.remove(peer.model);
@@ -706,12 +708,18 @@ async function syncPeers(){
     setTimeout(syncPeers,1000);
     return;
   }
+  if(!navigator.onLine){
+    el('online').textContent='Offline · solo play';
+    setTimeout(syncPeers,2000);
+    return;
+  }
   const sendingRun=vehicleRun;
   const canCollide=vehicle?.kind==='drone'&&health>0&&!collisionFall&&performance.now()-lastDroneCrash>6500;
   try{
-    const response=await fetch('/api/simulator-presence',{
+    const apiOrigin=location.protocol==='file:'?'https://mywebsite-one-beta-41.vercel.app':'';
+    const response=await fetch(apiOrigin+'/api/simulator-presence',{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({id:playerId,run:sendingRun,grounded:landed,pitch:model?.rotation.x??0,roll:model?.rotation.z??0,canCollide,custom:vehicle?.baseIndex!==undefined?{name:vehicle.name,paint:vehicle.paint,bladeGuards:!!vehicle.bladeGuards,fpv:!!vehicle.fpv,reinforced:!!vehicle.reinforced,motorBoost:!!vehicle.motorBoost}:null,vx:velocity.x,vy:velocity.y,vz:velocity.z,vehicle:vehicle?.baseIndex??vehicles.indexOf(vehicle),x:position.x,y:position.y,z:position.z,yaw:Math.atan2(Math.sin(yaw),Math.cos(yaw))}),
+      body:JSON.stringify({id:playerId,sequence:++presenceSequence,run:sendingRun,grounded:landed,pitch:model?.rotation.x??0,roll:model?.rotation.z??0,canCollide,custom:vehicle?.baseIndex!==undefined?{name:vehicle.name,paint:vehicle.paint,bladeGuards:!!vehicle.bladeGuards,fpv:!!vehicle.fpv,reinforced:!!vehicle.reinforced,motorBoost:!!vehicle.motorBoost}:null,vx:velocity.x,vy:velocity.y,vz:velocity.z,vehicle:vehicle?.baseIndex??vehicles.indexOf(vehicle),x:position.x,y:position.y,z:position.z,yaw:Math.atan2(Math.sin(yaw),Math.cos(yaw))}),
       signal:AbortSignal.timeout(4500)
     });
     if(!response.ok)throw new Error('Connection unavailable');
@@ -736,23 +744,19 @@ async function syncPeers(){
       const config=player.custom?{...base,modelName:base.name,...player.custom}:base;
       active.add(player.id);
       let peer=peers.get(player.id);
+      if(peer&&!isNewerSnapshot(peer,player))continue;
       if(peer&&peer.signature!==signature){removePeer(player.id,peer);peer=null;}
       if(!peer){
         const label=document.createElement('span');
         label.className='peer-label';
         label.textContent=config.name;
         document.body.append(label);
-        peer={signature,model:createModel(config,true),label,target:new THREE.Vector3(),velocity:new THREE.Vector3(),rotors:[]};
+        peer={signature,model:createModel(config,true),label,snapshots:[],sequence:0,seen:-1,rotors:[]};
         peer.model.traverse(part=>{if(part.userData.propeller)peer.rotors.push(part);});
         peer.model.position.set(player.x,player.y,player.z);
         peers.set(player.id,peer);
       }
-      peer.target.set(player.x,player.y,player.z);
-      peer.velocity.set(player.vx??0,player.vy??0,player.vz??0);
-      peer.received=performance.now();
-      peer.yaw=player.yaw;
-      peer.pitch=player.pitch??0;
-      peer.roll=player.roll??0;
+      receiveSnapshot(peer,player,performance.now());
       peer.grounded=player.grounded??player.y<=landingHeight+.1;
     }
     for(const [id,peer] of peers)if(!active.has(id))removePeer(id,peer);
@@ -764,20 +768,13 @@ async function syncPeers(){
   }
 }
 const labelPosition=new THREE.Vector3();
-const predictedPosition=new THREE.Vector3();
 function updatePeers(dt){
   for(const [id,peer] of peers){
     if(performance.now()-peer.received>18000){removePeer(id,peer);continue;}
     for(const rotor of peer.rotors)rotor.rotation.y+=peer.grounded?0:dt*42;
-    const age=Math.min((performance.now()-peer.received)/1000,.5);
-    predictedPosition.copy(peer.target).addScaledVector(peer.velocity,age);
-    peer.model.position.lerp(predictedPosition,1-Math.exp(-dt*12));
-    const yawDelta=Math.atan2(Math.sin(peer.yaw-peer.model.rotation.y),Math.cos(peer.yaw-peer.model.rotation.y));
-    peer.model.rotation.y+=yawDelta*(1-Math.exp(-dt*12));
-    for(const [axis,target] of [['x',peer.pitch],['z',peer.roll]]){
-      const delta=Math.atan2(Math.sin(target-peer.model.rotation[axis]),Math.cos(target-peer.model.rotation[axis]));
-      peer.model.rotation[axis]+=delta*(1-Math.exp(-dt*12));
-    }
+    const pose=sampleMotion(peer.snapshots,performance.now());
+    peer.model.position.set(pose.x,pose.y,pose.z);
+    peer.model.rotation.set(pose.pitch,pose.yaw,pose.roll,'YXZ');
     labelPosition.copy(peer.model.position);
     labelPosition.y+=2.1;
     labelPosition.project(camera);

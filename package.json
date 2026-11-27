@@ -6,9 +6,16 @@
   "name": "mywebsite",
   "private": true,
   "scripts": {
-    "test": "node --test tests/hawk.test.cjs"
+    "test": "node --test tests/*.test.cjs",
+    "build:offline": "node doload/build-offline.cjs"
   },
   "engines": {
     "node": ">=22"
+  },
+  "devDependencies": {
+    "@supabase/supabase-js": "^2.119.2",
+    "esbuild": "^0.25.12",
+    "fflate": "^0.8.3",
+    "three": "^0.170.0"
   }
 }
