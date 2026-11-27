@@ -93,7 +93,7 @@ async function main(){
   fs.writeFileSync(target,html);
  }
  let hub=fs.readFileSync(path.join(output,'index.html'),'utf8');
- hub=hub.replace('href="doload/index.html"','href="'+site+'/doload/index.html"');
+ hub=hub.replaceAll('href="doload/index.html"','href="'+site+'/doload/index.html"');
  hub=hub.replace(/\s+target="_blank"/g,'');
  hub=hub.replace('<img src="assets/the-invasion.png" alt="The Invasion" />','<span style="font:700 26px system-ui;text-align:center;padding:28px">The Invasion<br><small style="font-size:14px">Online · Scratch</small></span>');
 
