@@ -44,9 +44,11 @@ module.exports=async function handler(req,res){
  const sequence=Number.isSafeInteger(input.sequence)&&input.sequence>=0?input.sequence:0;
  const player={id,x,y,z,yaw,pitch,roll,vehicle,run,sequence,grounded,custom:cars.has(vehicle)?null:customDrone(input.custom),vx:speedComponent(input.vx),vy:speedComponent(input.vy),vz:speedComponent(input.vz),canCollide:input.canCollide===true,seen:Date.now()};
  try{
-  const active=(await Promise.all(slots.map(key=>cache.get(key))))
-   .map(value=>validPosition(value)&&Number.isFinite(value.seen)&&player.seen-value.seen<lifetime*1000&&value.vehicle>=0?value:null);
-  let slot=active.findIndex(value=>value?.id===id);
+  // Retain departure sequence numbers while leaving their slots available to others.
+  const records=(await Promise.all(slots.map(key=>cache.get(key))))
+   .map(value=>validPosition(value)&&Number.isFinite(value.seen)&&player.seen-value.seen<lifetime*1000?value:null);
+  const active=records.map(value=>value&&value.vehicle>=0?value:null);
+  let slot=records.findIndex(value=>value?.id===id);
   if(slot===-1&&vehicle>=0){
    const start=parseInt(id.slice(0,8),16)%slotCount;
    for(let offset=0;offset<slotCount;offset++){
@@ -55,14 +57,15 @@ module.exports=async function handler(req,res){
    }
   }
   if(slot===-1&&vehicle>=0)return res.status(503).json({error:'World is full'});
-  const previous=active[slot];
+  const previous=records[slot];
+  const outdated=sequence>0&&previous?.sequence>0&&sequence<=previous.sequence;
   const unchanged=previous&&Object.keys(player).every(key=>key==='seen'||key==='sequence'||JSON.stringify(player[key])===JSON.stringify(previous[key]));
   const heartbeatDue=!previous||player.seen-previous.seen>=8000;
-  if(slot>=0&&(!unchanged||heartbeatDue))await cache.set(slots[slot],player,{ttl:vehicle>=0?lifetime:1});
+  if(slot>=0&&!outdated&&(!unchanged||heartbeatDue))await cache.set(slots[slot],player,{ttl:lifetime});
   const peers=active.filter(value=>value&&value.id!==id&&value.vehicle>=0)
    .map(({id,x,y,z,yaw,pitch,roll,vehicle,custom,vx,vy,vz,grounded,seen,sequence})=>({id,x,y,z,yaw,pitch,roll,vehicle,custom,vx,vy,vz,grounded,seen,sequence}));
   let collision=false;
-  if(vehicle>=0&&!cars.has(vehicle)&&input.canCollide===true){
+  if(!outdated&&vehicle>=0&&!cars.has(vehicle)&&input.canCollide===true){
    collision=Boolean(await cache.get(collisionKey(player)));
    if(!collision){
     const other=active.find(peer=>peer&&peer.id!==id&&peer.canCollide&&!cars.has(peer.vehicle)

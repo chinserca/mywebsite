@@ -1,4 +1,4 @@
-const CACHE='ac-website-offline-c26e35aa8fec';
+const CACHE='ac-website-offline-4ac4f527415d';
 self.addEventListener('install',event=>{
  event.waitUntil((async()=>{
   const response=await fetch('/doload/offline-files.json',{cache:'no-store'});

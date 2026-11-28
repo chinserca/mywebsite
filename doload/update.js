@@ -2,9 +2,10 @@
 (()=>{
  if(location.protocol==='file:'||!('serviceWorker' in navigator))return;
  let registration,checking=false,reloading=false;
- const wasControlled=!!navigator.serviceWorker.controller;
+ let wasControlled=!!navigator.serviceWorker.controller;
  navigator.serviceWorker.addEventListener('controllerchange',()=>{
   if(wasControlled&&!reloading){reloading=true;location.reload();}
+  wasControlled=true;
  });
  async function check(){
   if(!navigator.onLine||checking)return;

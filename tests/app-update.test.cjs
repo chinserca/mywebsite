@@ -25,3 +25,8 @@ test('network errors preserve the current app and allow a later retry',async()=>
 test('loose ZIP files do not attempt unsupported service worker updates',async()=>{
  const app=page({protocol:'file:'});await settle();assert.equal(app.registrations,0);
 });
+test('an app kept open after its first installation applies the next update',async()=>{
+ const app=page({controlled:false});await settle();
+ app.workerEvents.controllerchange();assert.equal(app.reloads,0);
+ app.workerEvents.controllerchange();assert.equal(app.reloads,1);
+});
