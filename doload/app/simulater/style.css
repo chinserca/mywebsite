@@ -16,13 +16,13 @@ h1 { margin: 0; }
 #vehicles { display: grid; grid-template-columns: repeat(auto-fit,minmax(185px,1fr)); gap: 10px; }
 #vehicles button { text-align: left; min-height: 88px; border-top: 3px solid var(--paint); }
 #vehicles span { display: block; margin-top: 5px; font-size: .86rem; font-weight: 400; color: #b9d4e3; }
-#hud { position: fixed; top: 64px; left: 12px; max-width: min(460px,calc(100% - 24px)); padding: 14px; background: #101f30e8; border-radius: 12px; }
+#hud { z-index: 2; position: fixed; top: 64px; left: 12px; max-width: min(460px,calc(100% - 24px)); padding: 14px; background: #101f30e8; border-radius: 12px; }
 #hud h1 { font-size: 1.1rem; }
 #hud p { margin: 6px 0; font-size: .85rem; }
 .buttons { display: flex; flex-wrap: wrap; gap: 5px; }
 .buttons button { font-size: .8rem; padding: 7px 9px; }
 #raceStatus { color: #fcd787; }
-#touch { position: fixed; bottom: max(12px,env(safe-area-inset-bottom)); left: 12px; right: 12px; display: flex; justify-content: space-between; pointer-events: none; }
+#touch { z-index: 2; position: fixed; bottom: max(12px,env(safe-area-inset-bottom)); left: 12px; right: 12px; display: flex; justify-content: space-between; pointer-events: none; }
 #touch button { pointer-events: auto; touch-action: none; user-select: none; min-width: 49px; min-height: 49px; }
 .steering { display: grid; grid-template-columns: repeat(3,auto); gap: 4px; }
 .steering button:first-child { grid-column: 2; }
@@ -54,3 +54,6 @@ h1 { margin: 0; }
 #closeWorkshop { margin-top: 14px; }
 .workshop-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
 .workshop-row button[draggable] { cursor: grab; background: #285472; }
+
+.turning { display: flex; align-items: flex-end; gap: 6px; }
+@media (max-width: 1100px) { #touch:not([hidden]) { display: flex; } }

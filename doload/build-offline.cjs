@@ -99,6 +99,16 @@ async function main(){
 
  write('index.html',hub,output);
  write('THREE-LICENSE.txt',fs.readFileSync(path.join(root,'node_modules/three/LICENSE')),output);
+ // Bootstrap update checks on every installed app entry, including saved subpages.
+ write('update.js',fs.readFileSync(path.join(__dirname,'update.js')),output);
+ for(const file of fs.readdirSync(output,{recursive:true})){
+  if(!file.endsWith('.html'))continue;
+  const target=path.join(output,file);
+  const relative=path.relative(path.dirname(target),path.join(output,'update.js')).split(path.sep).join('/');
+  const html=fs.readFileSync(target,'utf8').replace('</head>','<script defer src="'+relative+'"></script></head>');
+  fs.writeFileSync(target,html);
+ }
+
  const appFiles=fs.readdirSync(output,{recursive:true}).filter(file=>fs.statSync(path.join(output,file)).isFile()).sort();
  const archive={};
  for(const file of appFiles)archive['AC Website/'+file]=new Uint8Array(fs.readFileSync(path.join(output,file)));

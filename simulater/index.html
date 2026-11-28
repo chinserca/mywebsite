@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Air &amp; Road Simulator</title>
-<link rel="stylesheet" href="style.css?v=workshop">
+<link rel="stylesheet" href="style.css?v=touch-turning">
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"}}</script>
 </head>
 <body>
@@ -27,6 +27,7 @@
 </section>
 <div id="touch" hidden aria-label="Touch controls">
  <div class="steering"><button data-key="w" aria-label="Forward">↑</button><button data-key="a" aria-label="Left">←</button><button data-key="s" aria-label="Reverse">↓</button><button data-key="d" aria-label="Right">→</button></div>
+ <div class="turning" aria-label="Drone turning"><button data-key="arrowleft" aria-label="Turn left">↶</button><button data-key="arrowright" aria-label="Turn right">↷</button></div>
  <div class="altitude"><button id="climb" data-key="arrowup" aria-label="Climb">+</button><button id="descend" data-key="arrowdown" aria-label="Descend">−</button></div>
 </div>
 <dialog id="workshop" aria-labelledby="workshopTitle">

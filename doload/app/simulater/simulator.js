@@ -407,9 +407,14 @@ function choose(config){
   el('camera').textContent='View · Chase';
   el('picker').hidden=true;
   el('garage').hidden=el('hud').hidden=el('touch').hidden=false;
-  el('touch').querySelector('.altitude').hidden=config.kind==='car'&&!config.thrusters;
+  el('touch').querySelector('.altitude').hidden=false;
+  el('touch').querySelector('.turning').hidden=config.kind!=='drone';
   const boostButton=el('descend');
-  el('climb').dataset.key=config.thrusters?' ':'arrowup';
+  const climbButton=el('climb');
+  climbButton.dataset.key=config.kind==='car'?' ':'arrowup';
+  climbButton.textContent=config.thrusters?'Lift':config.kind==='car'?'Brake':'+';
+  climbButton.setAttribute('aria-label',config.thrusters?'Lift thrusters':config.kind==='car'?'Brake':'Climb');
+  boostButton.hidden=config.kind==='car'&&!config.thrusters;
   boostButton.dataset.key=config.thrusters?'shift':'arrowdown';
   boostButton.textContent=config.thrusters?'Boost':'−';
   boostButton.setAttribute('aria-label',config.thrusters?'Forward boost':'Descend');
@@ -696,6 +701,15 @@ requestAnimationFrame(tick);
 const playerId=crypto.randomUUID();
 const peers=new Map();
 let presenceSequence=0;
+const presenceUrl=(location.protocol==='file:'?'https://mywebsite-one-beta-41.vercel.app':'')+'/api/simulator-presence';
+addEventListener('pagehide',()=>{
+  if(!navigator.onLine)return;
+  // Release the existing slot; the server already accepts vehicle -1 as leaving.
+  void fetch(presenceUrl,{
+    method:'POST',headers:{'Content-Type':'application/json'},keepalive:true,
+    body:JSON.stringify({id:playerId,sequence:++presenceSequence,vehicle:-1,x:position.x,y:position.y,z:position.z,yaw:Math.atan2(Math.sin(yaw),Math.cos(yaw))})
+  }).catch(()=>{});
+});
 
 function removePeer(id,peer){
   scene.remove(peer.model);
@@ -716,8 +730,7 @@ async function syncPeers(){
   const sendingRun=vehicleRun;
   const canCollide=vehicle?.kind==='drone'&&health>0&&!collisionFall&&performance.now()-lastDroneCrash>6500;
   try{
-    const apiOrigin=location.protocol==='file:'?'https://mywebsite-one-beta-41.vercel.app':'';
-    const response=await fetch(apiOrigin+'/api/simulator-presence',{
+    const response=await fetch(presenceUrl,{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({id:playerId,sequence:++presenceSequence,run:sendingRun,grounded:landed,pitch:model?.rotation.x??0,roll:model?.rotation.z??0,canCollide,custom:vehicle?.baseIndex!==undefined?{name:vehicle.name,paint:vehicle.paint,bladeGuards:!!vehicle.bladeGuards,fpv:!!vehicle.fpv,reinforced:!!vehicle.reinforced,motorBoost:!!vehicle.motorBoost}:null,vx:velocity.x,vy:velocity.y,vz:velocity.z,vehicle:vehicle?.baseIndex??vehicles.indexOf(vehicle),x:position.x,y:position.y,z:position.z,yaw:Math.atan2(Math.sin(yaw),Math.cos(yaw))}),
       signal:AbortSignal.timeout(4500)

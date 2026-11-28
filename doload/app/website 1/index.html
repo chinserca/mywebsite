@@ -14,7 +14,7 @@ if(location.protocol==='file:'){
   return originalFetch(input,options);
  };
 }
-</script></head>
+</script><script defer src="../update.js"></script></head>
 <body><aside style="padding:12px;background:#edf2ed;color:#18382c;font:14px system-ui">Accounts, orders and community updates need internet. <a href="https://mywebsite-one-beta-41.vercel.app/website%201/index.html" target="_blank" rel="noopener">Open the live page</a></aside>
 <header class="nav"><a class="brand" href="#"><span class="brand-mark" aria-hidden="true">H<span>3D</span></span>HawkTech3D</a><nav aria-label="Main navigation"><a href="#prints">Shop prints</a><a href="#details">How to order</a></nav><div class="account-nav"><a class="terms-button" href="terms.html">Terms of Service</a><a class="account-button" href="inventory.html">Inventory <span data-cart-count>0</span></a><button type="button" class="account-button" id="adminButton">Admin</button><button type="button" id="loginButton" class="account-button" disabled>Log in</button><button type="button" id="signupButton" class="account-button primary" disabled>Sign up</button><span id="accountName" hidden></span><button type="button" id="logoutButton" class="account-button" hidden>Log out</button></div></header>
 <p id="accountStatus" class="account-status" role="status">Loading accounts…</p>

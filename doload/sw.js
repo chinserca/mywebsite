@@ -1,4 +1,4 @@
-const CACHE='ac-website-offline-9c5390de3e9a';
+const CACHE='ac-website-offline-c26e35aa8fec';
 self.addEventListener('install',event=>{
  event.waitUntil((async()=>{
   const response=await fetch('/doload/offline-files.json',{cache:'no-store'});
@@ -6,8 +6,8 @@ self.addEventListener('install',event=>{
   const files=await response.json();
   const cache=await caches.open(CACHE);
   // Sequential groups keep the offline download from flooding the connection.
-  for(let i=0;i<files.length;i+=8)await cache.addAll(files.slice(i,i+8));
-  await cache.addAll(['/doload/manifest.webmanifest','/doload/icon-192.png','/doload/icon-512.png','/doload/install.js']);
+  for(let i=0;i<files.length;i+=8)await cache.addAll(files.slice(i,i+8).map(url=>new Request(url,{cache:'reload'})));
+  await cache.addAll(['/doload/manifest.webmanifest','/doload/icon-192.png','/doload/icon-512.png','/doload/install.js','/doload/update.js']);
   await self.skipWaiting();
  })());
 });
@@ -23,6 +23,13 @@ self.addEventListener('fetch',event=>{
  if(event.request.method!=='GET'||url.origin!==self.location.origin||!url.pathname.startsWith('/doload/app/'))return;
  event.respondWith((async()=>{
   const cache=await caches.open(CACHE);
+  // A fresh launch picks up the update bootstrap even from an older app cache.
+  if(event.request.mode==='navigate'){
+   try{
+    const fresh=await fetch(event.request,{cache:'no-store',signal:AbortSignal.timeout(3000)});
+    if(fresh.ok)return fresh;
+   }catch{}
+  }
   const response=await cache.match(event.request,{ignoreSearch:true});
   if(!response)return fetch(event.request);
   const range=event.request.headers.get('range');

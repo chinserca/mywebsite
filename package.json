@@ -7,7 +7,8 @@
   "private": true,
   "scripts": {
     "test": "node --test tests/*.test.cjs",
-    "build:offline": "node doload/build-offline.cjs"
+    "build:offline": "node doload/build-offline.cjs",
+    "dev": "node scripts/local-server.cjs"
   },
   "engines": {
     "node": ">=22"
